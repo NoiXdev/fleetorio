@@ -66,4 +66,12 @@ class UserFactory extends Factory
             'can_view_costs' => true,
         ]);
     }
+
+    public function withTwoFactor(): static
+    {
+        // Gültiges Base32-Secret; der Cast verschlüsselt es beim Speichern.
+        return $this->afterCreating(
+            fn (User $user) => $user->saveAppAuthenticationSecret('JBSWY3DPEHPK3PXP')
+        );
+    }
 }
