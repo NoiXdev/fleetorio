@@ -19,6 +19,12 @@ use function Pest\Livewire\livewire;
 it('actually runs the export under the sync queue and writes a file without cost columns', function () {
     config()->set('queue.default', 'sync');
 
+    // Storage::fake() isoliert den Test von der echten Festplatte: ohne das
+    // wuerden Dateien unter storage/app/.../filament_exports/ liegen bleiben,
+    // und eine Praefix-Suche nach "\d+.csv" koennte einen Rest aus einem
+    // frueheren Lauf treffen statt der Datei dieses Tests.
+    Storage::fake('local');
+
     actingAs(User::factory()->admin()->withCostAccess()->withTwoFactor()->create());
 
     Vehicle::factory()->count(3)->create();

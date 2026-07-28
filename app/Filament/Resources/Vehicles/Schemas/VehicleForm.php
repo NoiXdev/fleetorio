@@ -84,9 +84,17 @@ class VehicleForm
 
                 Section::make('Kosten')
                     ->columns(3)
-                    // Sichtbarkeit UND Speicherung an das Recht gebunden: ohne
-                    // dehydrated() wuerde ein Speichern ohne Kostenrecht die
-                    // vorhandenen Betraege auf null setzen.
+                    // Der eigentliche Schutz vor Datenverlust entsteht bereits hier:
+                    // Wenn diese Section versteckt ist, meldet ihr isDehydrated()
+                    // false (Filament dehydriert eine ausgeblendete Komponente nur,
+                    // wenn dehydratedWhenHidden() explizit gesetzt ist), und dieser
+                    // Zustand wird an alle Kind-Komponenten weitergereicht. Beim
+                    // Aufbau des gespeicherten Formularzustands werden deren
+                    // Statuspfade dadurch verworfen (Arr::forget), bevor das
+                    // dehydrated()-Flag der einzelnen Felder unten überhaupt
+                    // ausgewertet wird. Siehe vendor/filament/schemas/src/
+                    // Components/Concerns/HasState.php, dehydrateState()
+                    // (Zeilen 316-356) und isHiddenAndNotDehydratedWhenHidden().
                     ->visible(fn (): bool => auth()->user()?->can('viewCosts') ?? false)
                     ->schema([
                         TextInput::make('monthly_lease_rate')
@@ -94,6 +102,11 @@ class VehicleForm
                             ->numeric()
                             ->minValue(0)
                             ->prefix('€')
+                            // Verteidigung in der Tiefe: greift nur, falls dieses
+                            // Feld je aus der Section herausgelöst und nur noch
+                            // feldweise versteckt wird. Der eigentliche Schutz
+                            // (siehe Kommentar an der Section oben) wirkt bereits
+                            // vorher.
                             ->dehydrated(fn (): bool => auth()->user()?->can('viewCosts') ?? false),
                         TextInput::make('annual_vehicle_tax')
                             ->label('Kfz-Steuer (jährlich)')

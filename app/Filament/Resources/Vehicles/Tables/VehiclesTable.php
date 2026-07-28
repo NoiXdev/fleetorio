@@ -6,8 +6,6 @@ use App\Enums\FuelType;
 use App\Enums\VehicleStatus;
 use App\Filament\Exports\VehicleExporter;
 use App\Models\Vehicle;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ExportAction;
 use Filament\Tables\Columns\TextColumn;
@@ -75,13 +73,13 @@ class VehiclesTable
                     ->label('Export')
                     ->exporter(VehicleExporter::class),
             ])
+            // Bewusst kein Mehrfachlöschen: Fahrzeuge werden ausgemustert, nicht
+            // gelöscht. Mit zwei Klicks den halben Fuhrpark samt Kostenhistorie zu
+            // verlieren, ist ein zu großes Risiko für einen Bequemlichkeitsgewinn.
+            // Einzelnes Löschen bleibt auf der Edit-Seite verfügbar (nur Admins,
+            // siehe VehiclePolicy::delete).
             ->recordActions([
                 EditAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
             ]);
     }
 }

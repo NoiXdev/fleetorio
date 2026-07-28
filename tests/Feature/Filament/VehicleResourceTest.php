@@ -9,9 +9,11 @@ use App\Models\Employee;
 use App\Models\User;
 use App\Models\Vehicle;
 use Filament\Actions\CreateAction;
+use Filament\Actions\DeleteAction;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
+use function Pest\Laravel\assertDatabaseMissing;
 use function Pest\Livewire\livewire;
 
 it('lists active vehicles by default and hides retired ones', function () {
@@ -44,6 +46,22 @@ it('searches by licence plate', function () {
 
     livewire(ListVehicles::class)
         ->searchTable('M-AB')
+        ->assertCanSeeTableRecords([$wanted])
+        ->assertCanNotSeeTableRecords([$other]);
+});
+
+it('searches by the driver last name', function () {
+    // Genau die Zeile, die im Review korrigiert wurde (searchable(['first_name',
+    // 'last_name']) statt der fehlerhaften Tabellen-qualifizierten Fassung), war
+    // bisher ungetestet.
+    actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+    $driver = Employee::factory()->create(['last_name' => 'Musterfrau']);
+    $wanted = Vehicle::factory()->create(['employee_id' => $driver->id]);
+    $other = Vehicle::factory()->create(['employee_id' => null]);
+
+    livewire(ListVehicles::class)
+        ->searchTable('Musterfrau')
         ->assertCanSeeTableRecords([$wanted])
         ->assertCanNotSeeTableRecords([$other]);
 });
@@ -178,6 +196,24 @@ describe('cost visibility', function () {
             ->and((float) $vehicle->annual_insurance)->toBe(620.00);
     });
 
+    it('ignores a hostile write attempt on a cost field from a user without permission', function () {
+        // Beweist, dass die Autorisierung serverseitig ist: nicht nur ein
+        // harmloses Speichern ohne Aenderung, sondern der explizite Versuch,
+        // einen neuen Betrag einzutragen, wird ignoriert.
+        $vehicle = Vehicle::factory()->create([
+            'monthly_lease_rate' => 450.00,
+        ]);
+
+        actingAs(User::factory()->admin()->withTwoFactor()->create(['can_view_costs' => false]));
+
+        livewire(EditVehicle::class, ['record' => $vehicle->id])
+            ->fillForm(['monthly_lease_rate' => 999])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        expect((float) $vehicle->refresh()->monthly_lease_rate)->toBe(450.00);
+    });
+
     it('never shows cost columns in the vehicle table', function () {
         // Die Fahrzeugliste zeigt grundsaetzlich keine Betraege - dafuer gibt es
         // die Kostenseite. Auch nicht fuer Nutzer mit Kostenrecht.
@@ -203,4 +239,43 @@ it('stops a viewer from reaching the create page', function () {
     actingAs(User::factory()->viewer()->withTwoFactor()->create());
 
     $this->get('/admin/vehicles/create')->assertForbidden();
+});
+
+it('does not offer bulk deletion for vehicles', function () {
+    // Auftraggeber-Entscheidung: Fahrzeuge werden ausgemustert, nicht in Mengen
+    // geloescht. Mit zwei Klicks den halben Fuhrpark samt Kostenhistorie zu
+    // verlieren, ist ein zu grosses Risiko fuer einen Bequemlichkeitsgewinn.
+    actingAs(User::factory()->admin()->withTwoFactor()->create());
+    Vehicle::factory()->create();
+
+    livewire(ListVehicles::class)
+        ->assertOk()
+        ->assertTableBulkActionDoesNotExist('delete');
+});
+
+it('lets an admin delete a single vehicle', function () {
+    // Das einzelne Loeschen auf der Edit-Seite bleibt erhalten (nur Admins,
+    // siehe VehiclePolicy::delete) und verlangt eine Bestaetigung, die
+    // Filament fuer DeleteAction standardmaessig erzwingt.
+    $vehicle = Vehicle::factory()->create();
+
+    actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+    livewire(EditVehicle::class, ['record' => $vehicle->id])
+        ->assertActionExists(DeleteAction::class)
+        ->callAction(DeleteAction::class);
+
+    assertDatabaseMissing(Vehicle::class, ['id' => $vehicle->id]);
+});
+
+it('stops a viewer from reaching the edit page at all', function () {
+    // EditRecord::authorizeAccess() bricht mit 403 ab, bevor die Seite ueberhaupt
+    // mountet (VehiclePolicy::update ist nur fuer Admins wahr) - ein Viewer sieht
+    // die einzelne Loeschen-Action also gar nicht erst, weil er die Seite selbst
+    // nicht erreicht.
+    $vehicle = Vehicle::factory()->create();
+
+    actingAs(User::factory()->viewer()->withTwoFactor()->create());
+
+    $this->get("/admin/vehicles/{$vehicle->id}/edit")->assertForbidden();
 });
