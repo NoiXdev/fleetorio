@@ -86,4 +86,23 @@ class Vehicle extends Model
         return $query->active()
             ->whereBetween('lease_end', [today(), today()->addDays($days)]);
     }
+
+    /**
+     * Summiert die Jahreskosten per SQL. Der Accessor annual_total_cost rechnet je
+     * Datensatz in PHP; für eine Summenzeile über viele Zeilen wäre das unnötig
+     * teuer und für Filament-Summarizer nicht verwendbar.
+     */
+    public static function sumAnnualCost(Builder $query): float
+    {
+        $row = $query->clone()
+            ->reorder()
+            ->selectRaw(
+                'SUM(COALESCE(monthly_lease_rate, 0) * 12'
+                .' + COALESCE(annual_vehicle_tax, 0)'
+                .' + COALESCE(annual_insurance, 0)) AS aggregate'
+            )
+            ->first();
+
+        return (float) ($row?->aggregate ?? 0);
+    }
 }
