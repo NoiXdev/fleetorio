@@ -36,6 +36,19 @@ den Zugangsdaten unterscheiden.
 Fünf Tabellen. Fremdschlüssel auf Stammdaten sind bewusst optional (`nullable`), damit ein
 Fahrzeug angelegt werden kann, bevor Fahrer oder Tankkarte feststehen.
 
+Drei der Tabellen enthalten Personen bzw. Firmen und werden leicht verwechselt, deshalb zur
+Abgrenzung:
+
+- **`employees`** — eigene Mitarbeiter, die ein Firmenfahrzeug fahren. Intern, ohne
+  Softwarezugang.
+- **`leasing_companies`** — externe Leasinggeber, bei denen die Fahrzeuge geleast sind.
+  Vertragspartner, die man bei auslaufendem Leasing kontaktiert.
+- **`users`** — die Logins dieser App (Fuhrparkverantwortlicher, Buchhaltung).
+
+`employees` und `users` bleiben getrennt: sonst bräuchte jeder Dienstwagenfahrer einen
+Login, den er nie benutzt, und jeder Login wäre ein zusätzliches Angriffsziel. Eine Person
+kann in beiden Tabellen stehen — das sind zwei Datensätze für zwei verschiedene Zwecke.
+
 ### `vehicles`
 
 | Feld | Typ | Regeln |
@@ -46,7 +59,7 @@ Fahrzeug angelegt werden kann, bevor Fahrer oder Tankkarte feststehen.
 | `fuel_type` | enum | Pflicht: Benzin, Diesel, Hybrid, Plug-in-Hybrid, Elektro, sonstige |
 | `employee_id` | FK → `employees` | optional |
 | `fuel_card_id` | FK → `fuel_cards` | optional |
-| `lessor_id` | FK → `lessors` | optional |
+| `leasing_company_id` | FK → `leasing_companies` | optional |
 | `lease_start` | date | Pflicht |
 | `lease_end` | date | Pflicht, muss nach `lease_start` liegen |
 | `monthly_lease_rate` | decimal(10,2) | optional, ≥ 0 |
@@ -69,9 +82,10 @@ Anbieter (enum: DKV, Elli, sonstige), Kartennummer, gültig bis (date), Notizen.
 Die Kartennummer wird über Laravels `encrypted`-Cast verschlüsselt in der Datenbank
 abgelegt. Konsequenz: keine SQL-Suche über dieses Feld — bei dieser Datenmenge kein Verlust.
 
-### `lessors`
+### `leasing_companies`
 
-Name, Ansprechpartner, Telefon, E-Mail, Notizen.
+Die externen Leasinggeber, bei denen die Fahrzeuge geleast sind (z.B. VW Leasing, ALD,
+Athlon): Name, Ansprechpartner, Telefon, E-Mail, Notizen.
 
 ### `users`
 
@@ -107,11 +121,11 @@ Bewusst ohne Geldbeträge — sie dient der Orientierung, nicht der Auswertung.
 - Aufteilung nach Antriebsart (z.B. 12 Diesel / 5 Elektro / 3 Hybrid)
 - Das nächste anstehende Leasingende namentlich: „Nächstes Leasingende: M-AB 1234,
   VW Passat, in 34 Tagen"
-- Liste aller Verträge, die in den nächsten 90 Tagen auslaufen
+- Liste aller Verträge, die in den nächsten 180 Tagen auslaufen
 
 Alle Kennzahlen und Warnungen berücksichtigen ausschließlich Fahrzeuge mit
-`status = active`. Das Fenster von 90 Tagen ist fest im Code hinterlegt, nicht
-konfigurierbar.
+`status = active`. Das Fenster von 180 Tagen ist fest im Code hinterlegt, nicht
+konfigurierbar — ein halbes Jahr Vorlauf reicht, um Nachfolgefahrzeuge auszuschreiben.
 
 Keine E-Mail-Benachrichtigung und kein Cronjob: die Warnung erscheint beim Login, wo sie
 ohnehin gesehen wird.
@@ -172,7 +186,7 @@ Testgetrieben, Schwerpunkt auf Regeln, bei denen ein Fehler weh tut:
 - Ein `viewer` kann nicht schreiben — auch nicht per direktem Request
 - Ohne `can_view_costs` kommen keine Beträge heraus, auch nicht per direktem URL-Aufruf
 - Die Leasingende-Warnung zeigt die richtigen Fahrzeuge im richtigen Zeitfenster
-  (Grenzfälle: heute, in 90 Tagen, in 91 Tagen, bereits abgelaufen)
+  (Grenzfälle: heute, in 180 Tagen, in 181 Tagen, bereits abgelaufen)
 - Der Löschschutz für zugeordnete Stammdaten greift
 - Kennzeichen-Eindeutigkeit und Datumsvalidierung
 - Jahreskosten-Berechnung inklusive fehlender Werte
