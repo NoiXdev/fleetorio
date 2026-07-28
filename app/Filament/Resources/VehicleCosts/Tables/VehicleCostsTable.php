@@ -27,23 +27,26 @@ class VehicleCostsTable
                     ->label('Leasingrate (mtl.)')
                     ->money('EUR')
                     ->sortable()
-                    ->summarize(Sum::make()->label('Summe')->money('EUR')),
+                    // Eigene ID statt numerischer Autoindizierung, damit
+                    // assertTableColumnSummarySet() in Tests einen sprechenden
+                    // Schlüssel statt eines kryptischen '0' ansprechen kann.
+                    ->summarize(Sum::make('lease_sum')->label('Summe')->money('EUR')),
                 TextColumn::make('annual_vehicle_tax')
                     ->label('Kfz-Steuer (jährl.)')
                     ->money('EUR')
                     ->sortable()
-                    ->summarize(Sum::make()->label('Summe')->money('EUR')),
+                    ->summarize(Sum::make('tax_sum')->label('Summe')->money('EUR')),
                 TextColumn::make('annual_insurance')
                     ->label('Versicherung (jährl.)')
                     ->money('EUR')
                     ->sortable()
-                    ->summarize(Sum::make()->label('Summe')->money('EUR')),
+                    ->summarize(Sum::make('insurance_sum')->label('Summe')->money('EUR')),
                 // Abgeleiteter Wert: nicht sortierbar, da keine Datenbankspalte.
                 TextColumn::make('annual_total_cost')
                     ->label('Jahreskosten')
                     ->money('EUR')
                     ->summarize(
-                        Summarizer::make()
+                        Summarizer::make('total_sum')
                             ->label('Summe')
                             ->money('EUR')
                             // Filament liefert hier einen Illuminate\Database\Query\Builder

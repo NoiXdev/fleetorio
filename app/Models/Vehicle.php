@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 
 class Vehicle extends Model
 {
@@ -91,16 +92,22 @@ class Vehicle extends Model
      * Summiert die Jahreskosten per SQL. Der Accessor annual_total_cost rechnet je
      * Datensatz in PHP; für eine Summenzeile über viele Zeilen wäre das unnötig
      * teuer und für Filament-Summarizer nicht verwendbar.
+     *
+     * ->select(DB::raw(...)) statt ->selectRaw(...): selectRaw() ERGÄNZT die
+     * Spaltenliste, select() ERSETZT sie. Ein künftiger Aufrufer mit einer
+     * eigenen Selektion würde sonst "select <spalten>, SUM(...)" erzeugen -
+     * unter ONLY_FULL_GROUP_BY ein Fehler. Aktuell nicht auslösbar, aber diese
+     * Variante ist robuster gegen künftige Aufrufer.
      */
     public static function sumAnnualCost(Builder $query): float
     {
         $row = $query->clone()
             ->reorder()
-            ->selectRaw(
+            ->select(DB::raw(
                 'SUM(COALESCE(monthly_lease_rate, 0) * 12'
                 .' + COALESCE(annual_vehicle_tax, 0)'
                 .' + COALESCE(annual_insurance, 0)) AS aggregate'
-            )
+            ))
             ->first();
 
         return (float) ($row?->aggregate ?? 0);
