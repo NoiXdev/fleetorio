@@ -1,0 +1,206 @@
+<?php
+
+use App\Enums\FuelType;
+use App\Enums\VehicleStatus;
+use App\Filament\Resources\Vehicles\Pages\CreateVehicle;
+use App\Filament\Resources\Vehicles\Pages\EditVehicle;
+use App\Filament\Resources\Vehicles\Pages\ListVehicles;
+use App\Models\Employee;
+use App\Models\User;
+use App\Models\Vehicle;
+use Filament\Actions\CreateAction;
+
+use function Pest\Laravel\actingAs;
+use function Pest\Laravel\assertDatabaseHas;
+use function Pest\Livewire\livewire;
+
+it('lists active vehicles by default and hides retired ones', function () {
+    actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+    $active = Vehicle::factory()->count(2)->create();
+    $retired = Vehicle::factory()->retired()->create();
+
+    livewire(ListVehicles::class)
+        ->assertOk()
+        ->assertCanSeeTableRecords($active)
+        ->assertCanNotSeeTableRecords([$retired]);
+});
+
+it('shows retired vehicles when the status filter is changed', function () {
+    actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+    $retired = Vehicle::factory()->retired()->create();
+
+    livewire(ListVehicles::class)
+        ->filterTable('status', VehicleStatus::Retired->value)
+        ->assertCanSeeTableRecords([$retired]);
+});
+
+it('searches by licence plate', function () {
+    actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+    $wanted = Vehicle::factory()->create(['license_plate' => 'M-AB 1234']);
+    $other = Vehicle::factory()->create(['license_plate' => 'M-ZZ 9999']);
+
+    livewire(ListVehicles::class)
+        ->searchTable('M-AB')
+        ->assertCanSeeTableRecords([$wanted])
+        ->assertCanNotSeeTableRecords([$other]);
+});
+
+it('filters by fuel type', function () {
+    actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+    $electric = Vehicle::factory()->create(['fuel_type' => FuelType::Electric]);
+    $diesel = Vehicle::factory()->create(['fuel_type' => FuelType::Diesel]);
+
+    livewire(ListVehicles::class)
+        ->filterTable('fuel_type', FuelType::Electric->value)
+        ->assertCanSeeTableRecords([$electric])
+        ->assertCanNotSeeTableRecords([$diesel]);
+});
+
+it('creates a vehicle', function () {
+    actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+    $employee = Employee::factory()->create();
+
+    livewire(CreateVehicle::class)
+        ->fillForm([
+            'brand' => 'VW',
+            'model' => 'Passat',
+            'license_plate' => 'M-AB 1234',
+            'fuel_type' => FuelType::Diesel->value,
+            'employee_id' => $employee->id,
+            'lease_start' => '2026-01-01',
+            'lease_end' => '2029-01-01',
+            'monthly_lease_rate' => 450,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    assertDatabaseHas(Vehicle::class, [
+        'license_plate' => 'M-AB 1234',
+        'employee_id' => $employee->id,
+    ]);
+});
+
+it('rejects a duplicate licence plate', function () {
+    actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+    Vehicle::factory()->create(['license_plate' => 'M-AB 1234']);
+
+    livewire(CreateVehicle::class)
+        ->fillForm([
+            'brand' => 'VW',
+            'model' => 'Golf',
+            'license_plate' => 'M-AB 1234',
+            'fuel_type' => FuelType::Diesel->value,
+            'lease_start' => '2026-01-01',
+            'lease_end' => '2029-01-01',
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['license_plate' => 'unique']);
+});
+
+it('rejects a lease end before the lease start', function () {
+    actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+    livewire(CreateVehicle::class)
+        ->fillForm([
+            'brand' => 'VW',
+            'model' => 'Golf',
+            'license_plate' => 'M-XY 4321',
+            'fuel_type' => FuelType::Diesel->value,
+            'lease_start' => '2029-01-01',
+            'lease_end' => '2026-01-01',
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['lease_end']);
+});
+
+it('rejects negative amounts', function () {
+    actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+    livewire(CreateVehicle::class)
+        ->fillForm([
+            'brand' => 'VW',
+            'model' => 'Golf',
+            'license_plate' => 'M-XY 5555',
+            'fuel_type' => FuelType::Diesel->value,
+            'lease_start' => '2026-01-01',
+            'lease_end' => '2029-01-01',
+            'monthly_lease_rate' => -50,
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['monthly_lease_rate']);
+});
+
+describe('cost visibility', function () {
+    it('shows cost fields to a user with the permission', function () {
+        actingAs(User::factory()->admin()->withCostAccess()->withTwoFactor()->create());
+
+        livewire(CreateVehicle::class)
+            ->assertFormFieldVisible('monthly_lease_rate')
+            ->assertFormFieldVisible('annual_vehicle_tax')
+            ->assertFormFieldVisible('annual_insurance');
+    });
+
+    it('hides cost fields from a user without the permission', function () {
+        actingAs(User::factory()->admin()->create(['can_view_costs' => false]));
+
+        livewire(CreateVehicle::class)
+            ->assertFormFieldHidden('monthly_lease_rate')
+            ->assertFormFieldHidden('annual_vehicle_tax')
+            ->assertFormFieldHidden('annual_insurance');
+    });
+
+    it('keeps existing cost values when a user without permission saves', function () {
+        // Sonst würde das Bearbeiten eines Fahrzeugs die Kosten stillschweigend loeschen.
+        $vehicle = Vehicle::factory()->create([
+            'monthly_lease_rate' => 450.00,
+            'annual_vehicle_tax' => 180.00,
+            'annual_insurance' => 620.00,
+        ]);
+
+        actingAs(User::factory()->admin()->withTwoFactor()->create(['can_view_costs' => false]));
+
+        livewire(EditVehicle::class, ['record' => $vehicle->id])
+            ->fillForm(['brand' => 'Audi'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $vehicle->refresh();
+
+        expect($vehicle->brand)->toBe('Audi')
+            ->and((float) $vehicle->monthly_lease_rate)->toBe(450.00)
+            ->and((float) $vehicle->annual_vehicle_tax)->toBe(180.00)
+            ->and((float) $vehicle->annual_insurance)->toBe(620.00);
+    });
+
+    it('never shows cost columns in the vehicle table', function () {
+        // Die Fahrzeugliste zeigt grundsaetzlich keine Betraege - dafuer gibt es
+        // die Kostenseite. Auch nicht fuer Nutzer mit Kostenrecht.
+        actingAs(User::factory()->admin()->withCostAccess()->withTwoFactor()->create());
+        Vehicle::factory()->create();
+
+        livewire(ListVehicles::class)
+            ->assertOk()
+            ->assertTableColumnDoesNotExist('monthly_lease_rate');
+    });
+});
+
+it('hides write actions from viewers', function () {
+    actingAs(User::factory()->viewer()->withTwoFactor()->create());
+    Vehicle::factory()->create();
+
+    livewire(ListVehicles::class)
+        ->assertOk()
+        ->assertActionHidden(CreateAction::class);
+});
+
+it('stops a viewer from reaching the create page', function () {
+    actingAs(User::factory()->viewer()->withTwoFactor()->create());
+
+    $this->get('/admin/vehicles/create')->assertForbidden();
+});
