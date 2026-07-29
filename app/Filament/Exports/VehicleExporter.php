@@ -36,4 +36,11 @@ class VehicleExporter extends Exporter
     {
         return 'Der Fahrzeug-Export ist abgeschlossen.';
     }
+
+    // Deutsches Excel interpretiert Komma als Dezimaltrennzeichen und zerlegt
+    // eine kommagetrennte CSV daher nicht in Spalten.
+    public static function getCsvDelimiter(): string
+    {
+        return ';';
+    }
 }

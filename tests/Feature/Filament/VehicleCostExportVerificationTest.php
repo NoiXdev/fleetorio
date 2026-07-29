@@ -51,8 +51,10 @@ it('actually runs the cost export under the sync queue and writes a file with co
 
     // Filament schreibt die CSV mit einer UTF-8-BOM; die vor dem Parsen
     // entfernen, sonst haengt sie am ersten Feld ("\xEF\xBB\xBFKennzeichen").
+    // Trennzeichen ist Semikolon (VehicleCostExporter::getCsvDelimiter()),
+    // damit ein deutsches Excel die Datei tatsaechlich in Spalten zerlegt.
     $headerContent = ltrim($disk->get($headersFile), "\xEF\xBB\xBF");
-    $headerRow = str_getcsv(trim($headerContent));
+    $headerRow = str_getcsv(trim($headerContent), ';');
 
     expect($headerRow)->toBe([
         'Kennzeichen',
@@ -77,17 +79,60 @@ it('actually runs the cost export under the sync queue and writes a file with co
     // enthaelt (z.B. "M-AB123") - daher hier auf die konkreten Spalten nach
     // Index, nicht auf die Zeile als Ganzes.
     foreach ($lines as $line) {
-        $columns = str_getcsv($line);
+        $columns = str_getcsv($line, ';');
 
-        // annual_total_cost ist ein Attribute::get(...)-Accessor, der einen
-        // reinen float zurueckgibt (kein decimal-Cast) - daher hier ohne
-        // Nachkommastellen ("1275"), waehrend die drei decimal:2-Spalten sie
-        // behalten ("100.00" usw.).
+        // annual_total_cost wird ueber formatStateUsing() explizit auf zwei
+        // Nachkommastellen formatiert (siehe VehicleCostExporter), genau wie
+        // die drei decimal:2-Spalten davor - kein Formatunterschied mehr in
+        // derselben Zeile.
         expect($columns[3])->toBe('100.00')
             ->and($columns[4])->toBe('50.00')
             ->and($columns[5])->toBe('25.00')
-            ->and($columns[6])->toBe('1275');
+            ->and($columns[6])->toBe('1275.00');
     }
+});
+
+/**
+ * Ergaenzung zum Test oben: dort gehen alle Betraege glatt auf (Endziffer 0),
+ * was den fruehreren Fehler (float ohne Nachkommastellen in annual_total_cost)
+ * verdeckt haette. Hier daher eine Leasingrate, die selbst zwei Nachkomma-
+ * stellen ungleich Null hat, damit die Formatierung wirklich geprueft ist.
+ */
+it('keeps two decimal places for annual_total_cost even for uneven amounts', function () {
+    config()->set('queue.default', 'sync');
+
+    Storage::fake('local');
+
+    actingAs(User::factory()->admin()->withCostAccess()->withTwoFactor()->create());
+
+    Vehicle::factory()->create([
+        'monthly_lease_rate' => 123.45,
+        'annual_vehicle_tax' => 0,
+        'annual_insurance' => 0,
+    ]);
+
+    $columnMap = collect(VehicleCostExporter::getColumns())
+        ->mapWithKeys(fn ($column) => [$column->getName() => ['isEnabled' => true, 'label' => $column->getLabel()]])
+        ->all();
+
+    livewire(ListVehicleCosts::class)
+        ->callTableAction('export', data: ['columnMap' => $columnMap])
+        ->assertHasNoTableActionErrors();
+
+    $export = Export::latest('id')->first();
+
+    $disk = Storage::disk($export->file_disk ?? 'local');
+    $files = $disk->allFiles($export->getFileDirectory());
+
+    $dataFile = collect($files)->first(fn ($f) => preg_match('/\d+\.csv$/', $f));
+    $line = trim($disk->get($dataFile));
+
+    $columns = str_getcsv($line, ';');
+
+    // 123.45 * 12 = 1481.40 - eine Zahl, die als float ("1481.4") ihre
+    // trailing zero verlieren wuerde, waere die Formatierung nicht explizit.
+    expect($columns[3])->toBe('123.45')
+        ->and($columns[6])->toBe('1481.40');
 });
 
 /**
@@ -141,6 +186,6 @@ it('follows the status filter and does not export retired vehicles with their co
     $lines = explode("\n", trim($disk->get($dataFile)));
     expect($lines)->toHaveCount(1);
 
-    $columns = str_getcsv($lines[0]);
+    $columns = str_getcsv($lines[0], ';');
     expect($columns[3])->toBe('100.00');
 });
