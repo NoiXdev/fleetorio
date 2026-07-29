@@ -13,9 +13,12 @@ it('shows the active vehicle count and fuel type breakdown', function () {
     Vehicle::factory()->create(['fuel_type' => FuelType::Electric]);
     Vehicle::factory()->retired()->create(['fuel_type' => FuelType::Petrol]);
 
+    // Die Zahl im Kontext ihrer Beschriftung pruefen, statt an eine konkrete
+    // CSS-Klasse zu binden - sonst bricht der Test bei jeder Umgestaltung,
+    // ohne dass sich am Verhalten etwas geaendert haette.
     $this->get('/')
         ->assertOk()
-        ->assertSee('<p class="stat-value">3</p>', escape: false)
+        ->assertSeeInOrder(['Aktive Fahrzeuge', '3'], escape: false)
         ->assertSee('2 Diesel')
         ->assertSee('1 Elektro');
 });

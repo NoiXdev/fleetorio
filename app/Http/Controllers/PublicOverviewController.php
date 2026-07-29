@@ -19,7 +19,10 @@ class PublicOverviewController extends Controller
     {
         return view('public.overview', [
             'activeVehicleCount' => Vehicle::active()->count(),
-            'fuelTypeBreakdown' => Vehicle::activeFuelTypeBreakdown(),
+            // Die Einzelwerte statt der fertigen Textzeile, damit die Seite je
+            // Antriebsart ein eigenes Element rendern kann. Sortierung und
+            // Gruppierung bleiben am Model, gemeinsam mit dem Dashboard-Widget.
+            'fuelTypeCounts' => Vehicle::activeCountsByFuelType(),
         ]);
     }
 }

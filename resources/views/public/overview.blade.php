@@ -3,150 +3,284 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Fuhrparkmanagement – Übersicht</title>
+    <meta name="robots" content="noindex, nofollow">
+    <title>3B Fuhrparkmanagement</title>
+
+    {{-- Inter liegt lokal in den Filament-Assets. Bewusst keine externe Schriftquelle:
+         die Seite soll ohne Verbindung nach draußen laden. Die Hausschrift Klint ist
+         kommerziell lizenziert und steht hier nicht zur Verfügung. --}}
+    <link rel="stylesheet" href="{{ asset('fonts/filament/filament/inter/index.css') }}">
+
     <style>
+        /* Corporate Design Agentur3B: Rot #bb0000 auf Schwarz und Weiß. */
         :root {
             color-scheme: light dark;
-            --color-bg: #f4f6f8;
-            --color-surface: #ffffff;
-            --color-text: #1f2933;
-            --color-muted: #52606d;
-            --color-primary: #2563eb;
-            --color-primary-contrast: #ffffff;
-            --color-border: #e2e8f0;
+
+            --brand: #bb0000;
+            --brand-hover: #950000;
+            --ink: #101010;
+            --ink-soft: #5a5a5a;
+            --surface: #ffffff;
+            --canvas: #f2f2f3;
+            --line: #e3e3e5;
+            --shadow: 0 1px 2px rgb(0 0 0 / 5%), 0 14px 34px -14px rgb(0 0 0 / 14%);
         }
 
         @media (prefers-color-scheme: dark) {
             :root {
-                --color-bg: #0f172a;
-                --color-surface: #1e293b;
-                --color-text: #e2e8f0;
-                --color-muted: #94a3b8;
-                --color-primary: #3b82f6;
-                --color-primary-contrast: #0f172a;
-                --color-border: #334155;
+                /* Reines #bb0000 hat auf dunklem Grund zu wenig Kontrast. */
+                --brand: #ff3131;
+                --brand-hover: #ff5c5c;
+                --ink: #f4f4f5;
+                --ink-soft: #a1a1a6;
+                --surface: #161618;
+                --canvas: #0b0b0c;
+                --line: #2a2a2e;
+                --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 14px 34px -14px rgb(0 0 0 / 60%);
             }
         }
 
-        * {
-            box-sizing: border-box;
-        }
+        *, *::before, *::after { box-sizing: border-box; }
 
         body {
             margin: 0;
             min-height: 100vh;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1.5rem;
-            background: var(--color-bg);
-            color: var(--color-text);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            line-height: 1.5;
+            flex-direction: column;
+            background: var(--canvas);
+            color: var(--ink);
+            font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            font-feature-settings: 'cv02', 'cv03', 'cv04';
+            -webkit-font-smoothing: antialiased;
         }
 
-        main {
+        .shell {
             width: 100%;
-            max-width: 40rem;
-            background: var(--color-surface);
-            border: 1px solid var(--color-border);
-            border-radius: 1rem;
-            padding: 2.5rem 2rem;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            max-width: 58rem;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
         }
 
-        h1 {
-            margin: 0 0 0.5rem;
-            font-size: 1.75rem;
-            font-weight: 700;
+        /* Kopfzeile mit Wortmarke */
+        .masthead {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
         }
 
-        p.lead {
-            margin: 0 0 2rem;
-            color: var(--color-muted);
-            font-size: 1.05rem;
-        }
-
-        .stats {
+        .mark {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
-            gap: 1rem;
-            margin-bottom: 2.25rem;
-        }
-
-        .stat {
-            border: 1px solid var(--color-border);
-            border-radius: 0.75rem;
-            padding: 1.25rem;
-        }
-
-        .stat-label {
-            margin: 0 0 0.4rem;
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-            color: var(--color-muted);
-        }
-
-        .stat-value {
-            margin: 0;
-            font-size: 1.6rem;
+            place-items: center;
+            width: 2.5rem;
+            height: 2.5rem;
+            background: var(--brand);
+            color: #fff;
+            font-size: 1.0625rem;
             font-weight: 700;
+            letter-spacing: -0.02em;
+            border-radius: 0.5rem;
         }
 
-        .stat-value.text {
-            font-size: 1.1rem;
+        .wordmark {
+            font-size: 1rem;
+            font-weight: 600;
+            letter-spacing: -0.015em;
+        }
+
+        .wordmark span {
+            color: var(--ink-soft);
             font-weight: 500;
         }
 
-        .cta {
-            display: inline-block;
-            background: var(--color-primary);
-            color: var(--color-primary-contrast);
-            text-decoration: none;
+        main { flex: 1; }
+
+        /* Titelbereich */
+        .hero { margin: clamp(2.75rem, 9vw, 5rem) 0 clamp(2rem, 5vw, 2.75rem); }
+
+        .hero h1 {
+            margin: 0;
+            font-size: clamp(2.25rem, 6vw, 3.75rem);
+            font-weight: 700;
+            letter-spacing: -0.035em;
+            line-height: 1.05;
+        }
+
+        .hero h1::after {
+            content: '';
+            display: block;
+            width: 3.5rem;
+            height: 0.25rem;
+            margin-top: 1.5rem;
+            background: var(--brand);
+            border-radius: 999px;
+        }
+
+        .hero p {
+            max-width: 34rem;
+            margin: 1.5rem 0 0;
+            font-size: clamp(1rem, 2.2vw, 1.125rem);
+            line-height: 1.65;
+            color: var(--ink-soft);
+        }
+
+        /* Kennzahlen */
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 1rem;
+            box-shadow: var(--shadow);
+            padding: clamp(1.5rem, 4vw, 2.25rem);
+        }
+
+        .metric-label {
+            margin: 0;
+            font-size: 0.8125rem;
             font-weight: 600;
-            font-size: 1.05rem;
-            padding: 0.85rem 1.75rem;
-            border-radius: 0.6rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--ink-soft);
         }
 
-        .cta:hover,
-        .cta:focus-visible {
-            filter: brightness(1.08);
+        .metric-value {
+            margin: 0.5rem 0 0;
+            font-size: clamp(3rem, 11vw, 4.5rem);
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            line-height: 1;
+            color: var(--brand);
+            font-variant-numeric: tabular-nums;
         }
 
-        @media (max-width: 30rem) {
-            main {
-                padding: 2rem 1.25rem;
-            }
+        .divider {
+            height: 1px;
+            margin: 1.75rem 0;
+            background: var(--line);
+            border: 0;
+        }
 
-            .cta {
-                display: block;
-                text-align: center;
-            }
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin: 0.875rem 0 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .chips li {
+            padding: 0.4375rem 0.875rem;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: var(--canvas);
+            font-size: 0.9375rem;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .empty {
+            margin: 0.875rem 0 0;
+            color: var(--ink-soft);
+            font-size: 0.9375rem;
+        }
+
+        /* Anmeldung */
+        .cta { margin-top: 2.5rem; }
+
+        .button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.8125rem 1.625rem;
+            background: var(--brand);
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            border-radius: 0.5rem;
+            transition: background-color 120ms ease, transform 120ms ease;
+        }
+
+        .button:hover { background: var(--brand-hover); }
+        .button:active { transform: translateY(1px); }
+
+        .button:focus-visible {
+            outline: 2px solid var(--brand);
+            outline-offset: 3px;
+        }
+
+        .button svg {
+            width: 1.125rem;
+            height: 1.125rem;
+        }
+
+        .cta-note {
+            margin: 0.875rem 0 0;
+            font-size: 0.875rem;
+            color: var(--ink-soft);
+        }
+
+        footer {
+            border-top: 1px solid var(--line);
+            font-size: 0.8125rem;
+            color: var(--ink-soft);
+        }
+
+        footer .shell { padding-block: 1.5rem; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .button { transition: none; }
         }
     </style>
 </head>
 <body>
-    <main>
-        <h1>Fuhrparkmanagement</h1>
-        <p class="lead">Interne Übersicht über den Firmenfuhrpark: Fahrzeuge, Leasingzeiträume und Kosten.</p>
+    <div class="shell">
+        <header class="masthead">
+            <span class="mark" aria-hidden="true">3B</span>
+            <span class="wordmark">3B <span>Fuhrparkmanagement</span></span>
+        </header>
 
-        <div class="stats">
-            <div class="stat">
-                <p class="stat-label">Aktive Fahrzeuge</p>
-                <p class="stat-value">{{ $activeVehicleCount }}</p>
-            </div>
-            <div class="stat">
-                <p class="stat-label">Aufteilung nach Antriebsart</p>
-                <p class="stat-value text">
-                    {{ $fuelTypeBreakdown !== '' ? $fuelTypeBreakdown : 'Noch keine Fahrzeuge erfasst' }}
+        <main>
+            <div class="hero">
+                <h1>Der Fuhrpark<br>auf einen Blick.</h1>
+                <p>
+                    Fahrzeuge, Zuordnungen, Leasingzeiträume und Kosten &ndash; zentral
+                    dokumentiert statt über Tabellen verteilt.
                 </p>
             </div>
-        </div>
 
-        <a class="cta" href="/admin/login">Anmelden</a>
-    </main>
+            <section class="panel" aria-labelledby="metric-heading">
+                <p class="metric-label" id="metric-heading">Aktive Fahrzeuge</p>
+                <p class="metric-value">{{ $activeVehicleCount }}</p>
+
+                <hr class="divider">
+
+                <p class="metric-label">Aufteilung nach Antriebsart</p>
+
+                @if ($fuelTypeCounts->isEmpty())
+                    <p class="empty">Noch keine Fahrzeuge erfasst</p>
+                @else
+                    <ul class="chips">
+                        @foreach ($fuelTypeCounts as $fuelType => $total)
+                            <li>{{ $total }} {{ \App\Enums\FuelType::from($fuelType)->getLabel() }}</li>
+                        @endforeach
+                    </ul>
+                @endif
+            </section>
+
+            <div class="cta">
+                <a class="button" href="{{ url('/admin/login') }}">
+                    Anmelden
+                    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M7.21 4.21a1 1 0 0 1 1.415 0l5.083 5.083a1 1 0 0 1 0 1.414L8.625 15.79a1 1 0 1 1-1.415-1.414L11.586 10 7.21 5.624a1 1 0 0 1 0-1.414Z" clip-rule="evenodd" />
+                    </svg>
+                </a>
+                <p class="cta-note">Zugang nur für Mitarbeitende der Agentur3B.</p>
+            </div>
+        </main>
+    </div>
+
+    <footer>
+        <div class="shell">Interne Anwendung der Agentur3B</div>
+    </footer>
 </body>
 </html>
