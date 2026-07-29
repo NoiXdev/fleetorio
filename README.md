@@ -95,6 +95,120 @@ einmalig angezeigt — sicher aufbewahren. Um 2FA später wieder verpflichtend z
 - Datenbank-Backups einrichten.
 - Queue: siehe Notiz unten zum Export.
 
+## Deployment als Docker-Image
+
+Für das Deployment gibt es ein eigenständiges, mehrstufiges `Dockerfile` auf Basis von
+[FrankenPHP](https://frankenphp.dev). Es ist ausschließlich fürs Deployment gedacht — **DDEV
+bleibt die lokale Entwicklungsumgebung** und wird dadurch nicht ersetzt oder verändert; beide
+funktionieren unabhängig voneinander nebeneinander.
+
+Die Anwendung läuft darin im klassischen FrankenPHP-Modus, ausdrücklich **ohne** Laravel Octane
+und ohne FrankenPHPs Worker-Modus. Bei 3–5 Nutzern bringt Octane keinen messbaren
+Geschwindigkeitsvorteil, holt aber eine Fehlerklasse ins Haus, die mit Livewire und Filament
+besonders unangenehm ist: Zustand, der versehentlich zwischen Anfragen überlebt (statische
+Eigenschaften, Singletons, alles, was in einem einmal gebooteten Container hängen bleibt). Diese
+Begründung steht auch als Kommentar im `Dockerfile`, damit sie niemandem verloren geht, der es
+später "optimiert".
+
+Kein Node, kein npm, kein Asset-Build im Image: Filament liefert seine Assets bereits fertig
+unter `public/css/filament/` und `public/js/filament/` aus, und keine Blade-View im Projekt
+bindet `@vite` ein.
+
+### Bauen und lokal ausprobieren
+
+Zum Ausprobieren ohne eigenes Hosting liegt eine `docker-compose.yml` bei (Anwendung + eigene
+MariaDB, mit Volumes für die Datenbank und für `storage/app`). Sie belegt bewusst **nicht** die
+Ports 80/443 auf dem Host, da DDEV diese bereits verwendet — stattdessen Port **8080**:
+
+    APP_KEY=base64:… docker compose up --build
+
+Der `APP_KEY` ist Pflicht (siehe unten) und hat hier bewusst keinen Default; ein frisch mit
+`openssl rand -base64 32` erzeugter Schlüssel genügt für einen reinen Lokaltest mit der
+Wegwerf-Datenbank dieses Compose-Stacks. Anschließend:
+
+    docker compose exec app php artisan migrate   # einmalig, siehe "Erstes Deployment" unten
+    curl -I http://localhost:8080/
+
+Aufräumen (entfernt auch die Volumes der Testdatenbank):
+
+    docker compose down -v
+
+Nur das Image selbst bauen:
+
+    docker build -t fuhrpark:deploy .
+
+### Reihenfolge beim ersten Deployment
+
+Der Container migriert **nicht automatisch** beim Start — das ist Absicht. Der Auftraggeber
+bringt einen Datenbank-Dump aus der bestehenden Installation mit, und automatisches Migrieren
+beim Containerstart ist unsicher, sobald mehr als eine Instanz läuft. Reihenfolge:
+
+1. Image bauen: `docker build -t fuhrpark:deploy .`
+2. Umgebungsvariablen setzen (siehe `.env.docker.example` als kommentierte Vorlage) — insbesondere
+   `APP_KEY`, Datenbankzugang, `APP_URL`, `SERVER_NAME`.
+3. **Datenbank-Dump importieren** (empfohlen, da echte Arbeitsdaten mitkommen) **oder**, bei
+   einer leeren Datenbank, einmalig migrieren:
+
+       docker compose exec app php artisan migrate --force
+
+   Das ist ein bewusster, eigener Schritt — der Container tut das nicht von selbst.
+4. Container starten.
+
+### `APP_KEY` — nicht neu erzeugen
+
+Der `APP_KEY` verschlüsselt in der Datenbank unter anderem die Tankkartennummern. Für ein
+Deployment mit einem mitgebrachten Datenbank-Dump muss der **bestehende** Schlüssel aus der
+aktuellen Installation übernommen werden (aus deren `.env`) — niemals ein neuer per
+`artisan key:generate`. Ein anderer Schlüssel macht die vorhandenen Tankkartennummern
+unwiderruflich unlesbar. Siehe die Hinweise dazu in `.env.docker.example`.
+
+Das Image selbst enthält keinen `APP_KEY` und keine `.env` — beides kommt ausschließlich aus der
+Container-Umgebung. `config:cache`, `route:cache` und `view:cache` laufen deshalb bewusst **erst
+beim Containerstart** (im Entrypoint `docker/entrypoint.sh`), nicht beim `docker build`: Zum
+Build-Zeitpunkt ist die echte Umgebung (Datenbankzugang, `APP_URL`, …) noch nicht bekannt. Ein
+beim Build erzeugter Konfigurations-Cache würde diese leeren Platzhalterwerte einfrieren, und
+jeder gestartete Container würde die tatsächlich übergebene Umgebung stillschweigend ignorieren —
+der klassische Fehler bei containerisierten Laravel-Apps. Der Entrypoint bricht außerdem sofort
+mit einer klaren Fehlermeldung ab, wenn `APP_KEY` fehlt, statt später mit einem unverständlichen
+Verschlüsselungsfehler zu scheitern.
+
+### HTTPS
+
+Zwei Wege, je nachdem, was der Hoster hergibt:
+
+- **FrankenPHP macht HTTPS selbst.** `SERVER_NAME` auf die echte Domain setzen (z. B.
+  `SERVER_NAME=fuhrpark.example.com`). Das in FrankenPHP eingebaute Caddy besorgt sich dann
+  automatisch ein Let's-Encrypt-Zertifikat und erneuert es selbständig. Voraussetzung: Port 80
+  und 443 des Containers sind direkt aus dem Internet erreichbar (für die HTTP-01-Challenge).
+  Für dauerhaft gültige Zertifikate über Neustarts hinweg sollte `/data/caddy` dann als Volume
+  eingebunden werden, sonst fordert Caddy bei jedem Neustart ein neues Zertifikat an.
+- **Ein vorgeschalteter Reverse-Proxy** (nginx, Traefik, die Load-Balancer-Lösung des Hosters, …)
+  terminiert HTTPS bereits selbst. Dann `SERVER_NAME=":80"` setzen — Caddy serviert dann nur noch
+  reines HTTP auf Port 80 innerhalb des Containers, ohne selbst ein Zertifikat anzufordern, und
+  überlässt TLS vollständig dem Proxy davor.
+
+In beiden Fällen gilt weiterhin, was im Abschnitt *Betrieb in der Cloud* zu HTTPS steht: Laravel
+selbst erzeugt außerhalb der lokalen Umgebung nur noch `https`-URLs, setzt aber keine
+HTTP→HTTPS-Weiterleitung und kein HSTS gegenüber eingehenden Anfragen — im Reverse-Proxy-Fall ist
+das weiterhin Aufgabe des Proxys.
+
+### Sonstiges zum Image
+
+- Basis-Image: `dunglas/frankenphp`, fest gepinnt auf `1.12.6-php8.4.23-bookworm` (kein
+  `latest`, kein wandernder Tag). PHP 8.4, nicht 8.3: `composer.json` nennt zwar `"php": "^8.3"`,
+  aber `composer.lock` sperrt tatsächlich `symfony/console` & Co. auf `v8.1.x`, was PHP ≥8.4.1
+  voraussetzt — die Testsuite lief nie unter PHP 8.3, DDEV selbst nutzt Version 8.4
+  (`.ddev/config.yaml`). Das Image folgt damit der tatsächlich geprüften Version, nicht der
+  veralteten Angabe in `composer.json`.
+- Die Anwendung läuft im Container als `www-data` (uid 33), nicht als root. Der `frankenphp`-
+  Prozess kann trotzdem an Port 80/443 binden, weil das Basis-Image ihm bereits die Capability
+  `cap_net_bind_service` mitgibt.
+- Persistent zu haltende Pfade: `storage/app` (dort landen erzeugte Exportdateien) und die
+  MariaDB-Daten. `storage/logs` braucht in der Praxis kein eigenes Volume, es sei denn, Logs
+  sollen einen Containerneustart überleben.
+- Healthcheck des Containers ruft `/` auf (keine Anmeldung nötig) und prüft auf eine echte
+  Antwort der Anwendung.
+
 ## Export
 
 Der CSV-/Excel-Export läuft über Laravels Job-Batches mit `QUEUE_CONNECTION=sync`. Das ist
