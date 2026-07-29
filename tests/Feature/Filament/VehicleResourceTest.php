@@ -6,6 +6,7 @@ use App\Enums\VehicleStatus;
 use App\Filament\Resources\Vehicles\Pages\CreateVehicle;
 use App\Filament\Resources\Vehicles\Pages\EditVehicle;
 use App\Filament\Resources\Vehicles\Pages\ListVehicles;
+use App\Models\Dealership;
 use App\Models\Employee;
 use App\Models\FuelCard;
 use App\Models\User;
@@ -118,6 +119,30 @@ it('creates a vehicle', function () {
     ]);
 });
 
+it('assigns a dealership to a vehicle via the service section', function () {
+    actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+    $dealership = Dealership::factory()->create();
+
+    livewire(CreateVehicle::class)
+        ->fillForm([
+            'brand' => 'VW',
+            'model' => 'Passat',
+            'license_plate' => 'M-SV 0001',
+            'fuel_type' => FuelType::Diesel->value,
+            'lease_start' => '2026-01-01',
+            'lease_end' => '2029-01-01',
+            'dealership_id' => $dealership->id,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    assertDatabaseHas(Vehicle::class, [
+        'license_plate' => 'M-SV 0001',
+        'dealership_id' => $dealership->id,
+    ]);
+});
+
 it('rejects a duplicate licence plate', function () {
     actingAs(User::factory()->admin()->withTwoFactor()->create());
 
@@ -156,7 +181,8 @@ it('shows a short placeholder instead of Filaments default long one on the selec
     // Platzhalter den Text "Wählen Sie eine Option" (siehe vendor/filament/
     // forms/resources/lang/de/components.php, Schluessel select.placeholder).
     // Das betrifft hier nicht nur den Leasinggeber, sondern auch Mitarbeiter,
-    // Tankkarte und Antriebsart - alle vier haben keinen Standardwert.
+    // Tankkarte, Antriebsart und (seit der Autohaus-Erweiterung) das Autohaus
+    // - alle fuenf haben keinen Standardwert.
     //
     // Status hat einen Standardwert (VehicleStatus::Active) und zeigt daher
     // nie sichtbar einen Platzhalter; er bleibt bewusst unangetastet - sein
@@ -168,7 +194,7 @@ it('shows a short placeholder instead of Filaments default long one on the selec
     $html = livewire(CreateVehicle::class)->html();
 
     expect(substr_count($html, 'Wählen Sie eine Option'))->toBe(1)
-        ->and(substr_count($html, 'Auswählen'))->toBe(4);
+        ->and(substr_count($html, 'Auswählen'))->toBe(5);
 });
 
 it('renders lease start and end as native date inputs so they can be typed', function () {

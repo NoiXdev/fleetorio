@@ -99,6 +99,17 @@ class VehicleForm
                             ->after('lease_start'),
                     ]),
 
+                Section::make('Service')
+                    ->columns(2)
+                    ->schema([
+                        Select::make('dealership_id')
+                            ->label('Autohaus')
+                            ->relationship('dealership', 'name')
+                            ->searchable()
+                            ->placeholder('Auswählen')
+                            ->preload(),
+                    ]),
+
                 Section::make('Kosten')
                     ->columns(3)
                     // Der eigentliche Schutz vor Datenverlust entsteht bereits hier:

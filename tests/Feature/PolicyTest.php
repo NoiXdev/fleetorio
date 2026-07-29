@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Dealership;
 use App\Models\Employee;
 use App\Models\FuelCard;
 use App\Models\LeasingCompany;
@@ -45,6 +46,7 @@ it('applies the same rule to master data', function (string $model) {
     Employee::class,
     FuelCard::class,
     LeasingCompany::class,
+    Dealership::class,
 ]);
 
 it('restricts user administration to admins entirely', function () {

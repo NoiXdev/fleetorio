@@ -2,6 +2,7 @@
 
 use App\Enums\FuelType;
 use App\Enums\VehicleStatus;
+use App\Models\Dealership;
 use App\Models\Employee;
 use App\Models\FuelCard;
 use App\Models\LeasingCompany;
@@ -123,28 +124,47 @@ describe('lease urgency color', function () {
     });
 });
 
-it('relates to employee, fuel card and leasing company', function () {
+it('relates to employee, fuel card, leasing company and dealership', function () {
     $vehicle = Vehicle::factory()
         ->for(Employee::factory())
         ->for(FuelCard::factory())
         ->for(LeasingCompany::factory())
+        ->for(Dealership::factory())
         ->create();
 
     expect($vehicle->employee)->toBeInstanceOf(Employee::class)
         ->and($vehicle->fuelCard)->toBeInstanceOf(FuelCard::class)
-        ->and($vehicle->leasingCompany)->toBeInstanceOf(LeasingCompany::class);
+        ->and($vehicle->leasingCompany)->toBeInstanceOf(LeasingCompany::class)
+        ->and($vehicle->dealership)->toBeInstanceOf(Dealership::class);
 });
 
-it('allows a vehicle without employee, card or leasing company', function () {
+it('allows a vehicle without employee, card, leasing company or dealership', function () {
     $vehicle = Vehicle::factory()->create([
         'employee_id' => null,
         'fuel_card_id' => null,
         'leasing_company_id' => null,
+        'dealership_id' => null,
     ]);
 
     expect($vehicle->employee)->toBeNull()
         ->and($vehicle->fuelCard)->toBeNull()
-        ->and($vehicle->leasingCompany)->toBeNull();
+        ->and($vehicle->leasingCompany)->toBeNull()
+        ->and($vehicle->dealership)->toBeNull();
+});
+
+it('keeps the leasing company unaffected by a dealership change', function () {
+    // Auftraggeber-Entscheidung: Autohaus und Leasinggeber sind getrennt
+    // gefuehrt - ein Autohauswechsel darf den Leasingvertrag nicht beruehren.
+    $leasingCompany = LeasingCompany::factory()->create();
+    $oldDealership = Dealership::factory()->create();
+    $newDealership = Dealership::factory()->create();
+
+    $vehicle = Vehicle::factory()->for($leasingCompany)->for($oldDealership)->create();
+
+    $vehicle->update(['dealership_id' => $newDealership->id]);
+
+    expect($vehicle->fresh()->dealership->is($newDealership))->toBeTrue()
+        ->and($vehicle->fresh()->leasingCompany->is($leasingCompany))->toBeTrue();
 });
 
 describe('referential integrity', function () {
@@ -167,6 +187,13 @@ describe('referential integrity', function () {
         Vehicle::factory()->for($company)->create();
 
         expect(fn () => $company->delete())->toThrow(QueryException::class);
+    });
+
+    it('refuses to delete a dealership that is still referenced', function () {
+        $dealership = Dealership::factory()->create();
+        Vehicle::factory()->for($dealership)->create();
+
+        expect(fn () => $dealership->delete())->toThrow(QueryException::class);
     });
 
     it('protects assignments of retired vehicles too', function () {

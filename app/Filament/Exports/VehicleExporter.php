@@ -26,6 +26,7 @@ class VehicleExporter extends Exporter
             ExportColumn::make('employee.last_name')->label('Fahrer'),
             ExportColumn::make('fuelCard.provider')->label('Tankkarte'),
             ExportColumn::make('leasingCompany.name')->label('Leasinggeber'),
+            ExportColumn::make('dealership.name')->label('Autohaus'),
             ExportColumn::make('lease_start')->label('Leasingstart'),
             ExportColumn::make('lease_end')->label('Leasingende'),
             ExportColumn::make('status')->label('Status'),

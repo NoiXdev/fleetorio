@@ -2,6 +2,7 @@
 
 use App\Filament\Exports\VehicleExporter;
 use App\Filament\Resources\Vehicles\Pages\ListVehicles;
+use App\Models\Dealership;
 use App\Models\User;
 use App\Models\Vehicle;
 use Filament\Actions\Exports\Models\Export;
@@ -88,4 +89,32 @@ it('exports a vehicle without lease dates without failing rows', function () {
 
     expect($export->successful_rows)->toBe(1)
         ->and($export->getFailedRowsCount())->toBe(0);
+});
+
+it('includes the dealership in the exported columns and data', function () {
+    config()->set('queue.default', 'sync');
+    Storage::fake('local');
+
+    actingAs(User::factory()->admin()->withCostAccess()->withTwoFactor()->create());
+
+    $dealership = Dealership::factory()->create(['name' => 'Autohaus Nordwest']);
+    Vehicle::factory()->for($dealership)->create();
+
+    $columnMap = collect(VehicleExporter::getColumns())
+        ->mapWithKeys(fn ($column) => [$column->getName() => ['isEnabled' => true, 'label' => $column->getLabel()]])
+        ->all();
+
+    livewire(ListVehicles::class)
+        ->callTableAction('export', data: ['columnMap' => $columnMap])
+        ->assertHasNoTableActionErrors();
+
+    $export = Export::latest('id')->first();
+    $disk = Storage::disk($export->file_disk ?? 'local');
+    $files = $disk->allFiles($export->getFileDirectory());
+
+    $headersFile = collect($files)->first(fn ($f) => str_ends_with($f, 'headers.csv'));
+    expect($disk->get($headersFile))->toContain('Autohaus');
+
+    $dataFile = collect($files)->first(fn ($f) => preg_match('/\d+\.csv$/', $f));
+    expect($disk->get($dataFile))->toContain('Autohaus Nordwest');
 });

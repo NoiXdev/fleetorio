@@ -20,6 +20,7 @@ class VehicleFactory extends Factory
             'employee_id' => null,
             'fuel_card_id' => null,
             'leasing_company_id' => null,
+            'dealership_id' => null,
             'lease_start' => $leaseStart,
             'lease_end' => fake()->dateTimeBetween('+1 month', '+3 years'),
             'monthly_lease_rate' => fake()->randomFloat(2, 250, 800),

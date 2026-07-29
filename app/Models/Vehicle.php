@@ -37,6 +37,7 @@ class Vehicle extends Model
         'employee_id',
         'fuel_card_id',
         'leasing_company_id',
+        'dealership_id',
         'lease_start',
         'lease_end',
         'monthly_lease_rate',
@@ -72,6 +73,16 @@ class Vehicle extends Model
     public function leasingCompany(): BelongsTo
     {
         return $this->belongsTo(LeasingCompany::class);
+    }
+
+    /**
+     * Autohaus und Leasinggeber werden getrennt gefuehrt (Auftraggeber-
+     * Entscheidung): der Leasingvertrag laeuft beim Leasinggeber, der Service
+     * beim Autohaus - ein Autohauswechsel beruehrt den Leasingvertrag nicht.
+     */
+    public function dealership(): BelongsTo
+    {
+        return $this->belongsTo(Dealership::class);
     }
 
     /**
