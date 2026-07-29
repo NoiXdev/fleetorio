@@ -2,7 +2,6 @@
 
 namespace App\Filament\Widgets;
 
-use App\Enums\FuelType;
 use App\Models\Vehicle;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -22,25 +21,10 @@ class FleetOverview extends BaseWidget
 
     private function fleetSizeStat(): Stat
     {
-        $byFuelType = Vehicle::active()
-            ->selectRaw('fuel_type, COUNT(*) AS total')
-            ->groupBy('fuel_type')
-            ->pluck('total', 'fuel_type');
-
-        // groupBy() liefert keine garantierte Reihenfolge. Für die Anzeige
-        // sortieren wir absteigend nach Häufigkeit (die dominierende
-        // Antriebsart zuerst ist die interessantere Information), mit der
-        // Deklarationsreihenfolge der Enum als stabilem Kriterium bei
-        // Gleichstand - damit ändert sich die Reihenfolge nicht willkürlich
-        // zwischen Aufrufen, wenn zwei Antriebsarten gleich häufig sind.
-        $enumOrder = array_flip(array_column(FuelType::cases(), 'value'));
-
-        $breakdown = $byFuelType
-            ->sortBy(
-                fn (int $total, string $fuelType): array => [-$total, $enumOrder[$fuelType]],
-            )
-            ->map(fn (int $total, string $fuelType): string => $total.' '.FuelType::from($fuelType)->getLabel())
-            ->implode(' · ');
+        // Gruppierung und Sortierung nach Antriebsart leben zentral auf dem
+        // Vehicle-Model (Vehicle::activeCountsByFuelType()), weil die
+        // öffentliche Startseite dieselbe Aufteilung zeigt.
+        $breakdown = Vehicle::activeFuelTypeBreakdown();
 
         return Stat::make('Aktive Fahrzeuge', (string) Vehicle::active()->count())
             ->description($breakdown !== '' ? $breakdown : 'Noch keine Fahrzeuge erfasst')

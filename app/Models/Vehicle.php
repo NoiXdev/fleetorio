@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class Vehicle extends Model
@@ -111,5 +112,42 @@ class Vehicle extends Model
             ->first();
 
         return (float) ($row?->aggregate ?? 0);
+    }
+
+    /**
+     * Aktive Fahrzeuge je Antriebsart, absteigend nach Anzahl sortiert und bei
+     * Gleichstand nach der Deklarationsreihenfolge von FuelType (damit die
+     * Reihenfolge nicht willkürlich zwischen Aufrufen wechselt, wenn zwei
+     * Antriebsarten gleich häufig sind).
+     *
+     * Wird sowohl vom Dashboard-Widget FleetOverview als auch von der
+     * öffentlichen Startseite verwendet - deshalb hier zentral statt an
+     * beiden Stellen abgeschrieben.
+     *
+     * @return Collection<string, int> Antriebsart (Enum-Value) => Anzahl
+     */
+    public static function activeCountsByFuelType(): Collection
+    {
+        $counts = static::active()
+            ->selectRaw('fuel_type, COUNT(*) AS total')
+            ->groupBy('fuel_type')
+            ->pluck('total', 'fuel_type');
+
+        $enumOrder = array_flip(array_column(FuelType::cases(), 'value'));
+
+        return $counts->sortBy(
+            fn (int $total, string $fuelType): array => [-$total, $enumOrder[$fuelType]],
+        );
+    }
+
+    /**
+     * Formatierte Kurzfassung der obigen Verteilung, z.B. "3 Diesel · 1 Benzin".
+     * Zentral hier, damit Widget und Startseite exakt denselben Text zeigen.
+     */
+    public static function activeFuelTypeBreakdown(): string
+    {
+        return static::activeCountsByFuelType()
+            ->map(fn (int $total, string $fuelType): string => $total.' '.FuelType::from($fuelType)->getLabel())
+            ->implode(' · ');
     }
 }

@@ -1,0 +1,51 @@
+<?php
+
+use App\Enums\FuelType;
+use App\Models\Employee;
+use App\Models\Vehicle;
+
+it('serves the public overview page to guests', function () {
+    $this->get('/')->assertOk();
+});
+
+it('shows the active vehicle count and fuel type breakdown', function () {
+    Vehicle::factory()->count(2)->create(['fuel_type' => FuelType::Diesel]);
+    Vehicle::factory()->create(['fuel_type' => FuelType::Electric]);
+    Vehicle::factory()->retired()->create(['fuel_type' => FuelType::Petrol]);
+
+    $this->get('/')
+        ->assertOk()
+        ->assertSee('<p class="stat-value">3</p>', escape: false)
+        ->assertSee('2 Diesel')
+        ->assertSee('1 Elektro');
+});
+
+it('renders without errors when no vehicle is recorded', function () {
+    $this->get('/')
+        ->assertOk()
+        ->assertSee('Noch keine Fahrzeuge erfasst');
+});
+
+it('shows a prominent login link to the admin panel', function () {
+    $this->get('/')
+        ->assertOk()
+        ->assertSee('Anmelden')
+        ->assertSee('/admin/login', escape: false);
+});
+
+it('never leaks license plates or employee names to the public overview page', function () {
+    $employee = Employee::factory()->create([
+        'first_name' => 'Geheim',
+        'last_name' => 'Vertraulich',
+    ]);
+
+    Vehicle::factory()->for($employee)->create([
+        'license_plate' => 'M-XX 9999',
+    ]);
+
+    $this->get('/')
+        ->assertOk()
+        ->assertDontSee('M-XX 9999')
+        ->assertDontSee('Geheim')
+        ->assertDontSee('Vertraulich');
+});

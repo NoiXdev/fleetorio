@@ -1,7 +1,6 @@
 <?php
 
+use App\Http\Controllers\PublicOverviewController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', PublicOverviewController::class)->name('home');
