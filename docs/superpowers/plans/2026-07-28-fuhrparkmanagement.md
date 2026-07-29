@@ -1116,7 +1116,7 @@ ddev artisan migrate
 ddev exec vendor/bin/pest tests/Feature/Models/VehicleTest.php
 ```
 
-Erwartet: PASS, 19 Tests. Falls die Integritätstests fehlschlagen, weil keine Exception fliegt:
+Erwartet: PASS, 20 Tests. Falls die Integritätstests fehlschlagen, weil keine Exception fliegt:
 prüfen, ob die Foreign Keys tatsächlich angelegt wurden (`ddev mysql -e "SHOW CREATE TABLE
 vehicles"`) — MariaDB muss `ON DELETE RESTRICT` zeigen.
 
@@ -2596,10 +2596,15 @@ jeden sichtbar) und **Kosten** (die drei Betragsfelder — nur mit `viewCosts`).
 Nutzer ohne Kostenrecht das Leasingende nicht sehen, und das ist die wichtigste Information der
 ganzen Anwendung.
 
-**Fallstrick, den Schritt 6 absichert:** Ein Feld, das per `visible()` versteckt ist, wird beim
-Speichern nicht mitgesendet. Ein Admin ohne Kostenrecht könnte damit beim Bearbeiten eines
-Fahrzeugs die Kostenwerte auf `null` setzen — unbemerkt. Deshalb erhalten die Kostenfelder
-zusätzlich `dehydrated(...)`, und ein Test beweist, dass die Werte erhalten bleiben.
+**Nachträglich korrigiert (Erkenntnis aus der Umsetzung):** Der Plan nahm an, ein per
+`visible()` verstecktes Feld werde beim Speichern zwar nicht gesendet, könnte aber die
+vorhandenen Werte auf `null` setzen — abzusichern durch zusätzliches `dehydrated(...)`. Das ist
+falsch. Filament 5 verwirft in `getState()` die Statuspfade **aller Kinder einer versteckten
+Section** (`vendor/filament/schemas/src/Components/Concerns/HasState.php`), sodass die drei
+Kostenschlüssel das Modell nie erreichen — auch bei einer absichtlich manipulierten Anfrage.
+Der Schutz ist also stärker als angenommen und liegt an der Section, nicht am Feld. Die
+`dehydrated(...)`-Aufrufe bleiben als Verteidigung in der Tiefe für den Fall, dass die Felder je
+aus der Section herausgehoben werden; der zugehörige Test prüft weiterhin das Verhalten.
 
 - [ ] **Step 1: Failing Test schreiben**
 
@@ -2987,8 +2992,6 @@ use App\Enums\FuelType;
 use App\Enums\VehicleStatus;
 use App\Filament\Exports\VehicleExporter;
 use App\Models\Vehicle;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ExportAction;
 use Filament\Tables\Columns\TextColumn;
@@ -3015,7 +3018,10 @@ class VehiclesTable
                 TextColumn::make('employee.last_name')
                     ->label('Fahrer')
                     ->formatStateUsing(fn ($state, Vehicle $record): string => $record->employee?->full_name ?? '—')
-                    ->searchable(['employees.first_name', 'employees.last_name']),
+                    // Spaltennamen ohne Tabellenpräfix: Filament deutet einen Punkt sonst als
+                    // JSON-Pfad, wenn das Präfix nicht die Haupttabelle ist, und erzeugt
+                    // ungültiges SQL. Die Namen werden in die Relations-Unterabfrage gegeben.
+                    ->searchable(['first_name', 'last_name']),
                 TextColumn::make('fuel_type')
                     ->label('Antriebsart')
                     ->badge()
@@ -3056,13 +3062,12 @@ class VehiclesTable
                     ->label('Export')
                     ->exporter(VehicleExporter::class),
             ])
+            // Kein Mehrfachlöschen: Fahrzeuge werden ausgemustert, nicht gelöscht. Endgültiges
+            // Löschen bleibt möglich, aber nur einzeln über die Edit-Seite und nur für Admins —
+            // mit zwei Klicks den halben Fuhrpark samt Kostenhistorie zu verlieren, wäre ein zu
+            // großes Risiko für einen Bequemlichkeitsgewinn.
             ->recordActions([
                 EditAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
             ]);
     }
 }
@@ -3872,9 +3877,13 @@ ddev exec vendor/bin/pest tests/Feature/Filament/DashboardTest.php
 
 Erwartet: PASS, 8 Tests.
 
-Falls `getTableHeading()` nicht greift: alternativ `protected ?string $heading` setzen — dann
-allerdings ohne die Konstante im Text, also den Wert dort ausschreiben und einen Kommentar mit
-Verweis auf `Vehicle::LEASE_WARNING_DAYS` ergänzen.
+**Nachträglich korrigiert:** Der ursprünglich hier genannte Fallback — ein nicht-statisches
+`protected ?string $heading` — ist **falsch und darf nicht verwendet werden.** Die
+Filament-Basisklasse deklariert `$heading` statisch; eine nicht-statische Überschreibung erzeugt
+einen Fatal Error beim Laden der Klasse (`Cannot redeclare static Base::$heading as non static
+Child::$heading`), nicht etwa stillen toten Code. In der Umsetzung war ohnehin kein Fallback
+nötig: `getTableHeading()` greift über normale Polymorphie, die Basisklasse ruft
+`$this->getTableHeading()` auf.
 
 - [ ] **Step 7: Commit**
 
