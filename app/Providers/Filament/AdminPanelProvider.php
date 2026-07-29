@@ -31,11 +31,17 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogo(asset('images/a3b-logo.svg'))
             ->brandLogoHeight('2rem')
             ->favicon(asset('images/a3b-logo.png'))
-            // Primärfarbe bewusst nicht auf das Markenrot gesetzt: Filament
-            // nutzt Rot für Fehler, Löschbestätigungen und Warnungen. Ein rotes
-            // Panel würde genau die Meldungen verschlucken, die auffallen sollen.
+            // Primärfarbe ist das Markenrot (#bb0000). Filament nutzt
+            // standardmäßig Rot auch für 'danger' (Löschbestätigungen,
+            // Fehler, Warnungen) - mit rotem Primärton wäre ein
+            // "Speichern"-Knopf nicht mehr von einem "Löschen"-Knopf zu
+            // unterscheiden. Deshalb ist 'danger' auf Color::Rose verschoben:
+            // deutlich pinker und heller als das Markenrot, aber weiterhin
+            // klar als Warnfarbe erkennbar. 'warning' und 'success' bleiben
+            // unverändert.
             ->colors([
-                'primary' => Color::Blue,
+                'primary' => Color::hex('#bb0000'),
+                'danger' => Color::Rose,
             ])
             ->login(Login::class)
             ->profile()
