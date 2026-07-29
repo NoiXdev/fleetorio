@@ -163,7 +163,7 @@
             Fuhrparkmanagement
         </h1>
 
-        <p>Fahrzeuge, Leasingzeiträume und Kosten &ndash; zentral dokumentiert.</p>
+        <p>Fahrzeuge, Leasingzeiträume und weitere Infos &ndash; einfach zentral dokumentiert.</p>
 
         <a class="button" href="{{ url('/admin/login') }}">
             Anmelden
@@ -172,7 +172,7 @@
             </svg>
         </a>
 
-        <p class="note">Interne Anwendung &ndash; Zugang nur für Mitarbeitende.</p>
+        <p class="note">Interne Anwendung</p>
     </main>
 </body>
 </html>
