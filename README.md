@@ -1,58 +1,64 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Fuhrparkmanagement
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Interne Web-App zur Dokumentation des Firmenfuhrparks: Fahrzeuge, Fahrer, Tankkarten,
+Leasingzeiträume und Kosten.
 
-## About Laravel
+## Stack
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Laravel 13, Filament 5, MariaDB, DDEV für die lokale Entwicklung.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Lokal starten
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+    ddev start
+    ddev launch /admin
 
-## Learning Laravel
+## Tests
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+    ddev exec vendor/bin/pest
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Die Testsuite läuft gegen eine eigene MariaDB-Datenbank `fuhrpark_test` (konfiguriert in
+`phpunit.xml`), nicht gegen SQLite. DDEV richtet diese Datenbank ein; ein neuer Rechner
+braucht dafür keine zusätzliche Konfiguration.
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+## Benutzer und Rechte
 
-## Agentic Development
+Benutzer werden in der App unter *Verwaltung → Benutzer* gepflegt. Zwei Angaben steuern die
+Rechte:
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+- **Rolle** — *Administrator* darf alles, *Nur-Lesen* darf ausschließlich lesen und exportieren.
+- **Darf Kosten sehen** — unabhängig von der Rolle. Ohne dieses Recht bleiben alle Beträge
+  verborgen, auch der Menüpunkt *Kosten*.
 
-```bash
-composer require laravel/boost --dev
+Der erste Benutzer wird über `ddev artisan make:filament-user` angelegt und anschließend zum
+Administrator gemacht.
 
-php artisan boost:install
-```
+Zwei-Faktor-Authentisierung per Authenticator-App ist Pflicht und wird beim ersten Login
+eingerichtet. Recovery-Codes werden dabei einmalig angezeigt — sicher aufbewahren.
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+## Betrieb in der Cloud
 
-## Contributing
+- `APP_ENV=production` und `APP_DEBUG=false` setzen
+- `APP_KEY` muss gesetzt sein und darf sich nie ändern: Tankkartennummern und 2FA-Secrets sind
+  damit verschlüsselt. Ein Verlust des Schlüssels macht diese Daten unlesbar.
+- HTTPS wird außerhalb der lokalen Umgebung automatisch erzwungen.
+- Sessions laufen nach 60 Minuten Inaktivität ab und enden zusätzlich beim Schließen des
+  Browsers (`SESSION_LIFETIME=60`, `SESSION_EXPIRE_ON_CLOSE=true`).
+- Login-Versuche werden von Filament serverseitig gedrosselt (5 Fehlversuche, 60 Sekunden
+  Sperre) — fest im Vendor-Code, keine Konfiguration nötig.
+- Datenbank-Backups einrichten.
+- Queue: siehe Notiz unten zum Export.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Export
 
-## Code of Conduct
+Der CSV-/Excel-Export läuft über Laravels Job-Batches mit `QUEUE_CONNECTION=sync`. Das ist
+Absicht: bei dieser Datenmenge ist der Export sofort fertig, und es braucht keinen
+Worker-Prozess auf dem Server. Der Export wurde in den Aufgaben zur Fahrzeug- und
+Kostenübersicht gegen diese Konfiguration verifiziert (echte Dateien, korrekte Spalten).
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Sollte künftig auf `database` umgestellt werden, muss ein Worker laufen
+(`php artisan queue:work`, überwacht durch systemd oder Supervisor).
 
-## Security Vulnerabilities
+## Nicht enthalten (bewusst)
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Audit-Log, E-Mail-Benachrichtigungen, Fahrer-Historie, Kraftstoffkosten via DKV/Elli.
+Siehe `docs/superpowers/specs/2026-07-28-fuhrparkmanagement-design.md`.
