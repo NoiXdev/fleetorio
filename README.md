@@ -7,10 +7,32 @@ Leasingzeiträume und Kosten.
 
 Laravel 13, Filament 5, MariaDB, DDEV für die lokale Entwicklung.
 
+## Frisch aufsetzen (nach dem Klonen)
+
+`vendor/` und `.env` liegen nicht im Repository, ein Klon braucht deshalb einmalig:
+
+    ddev start
+    ddev composer install
+    ddev artisan key:generate
+    ddev artisan migrate
+    ddev artisan make:filament-user
+
+DDEV legt die `.env` beim ersten Start mit den Datenbankzugängen selbst an. `key:generate`
+schreibt den `APP_KEY` hinein — **ohne ihn startet die Anwendung nicht**, und er darf danach
+nicht mehr wechseln (siehe *Betrieb in der Cloud*).
+
+Der so erzeugte Benutzer hat die Rolle *Nur-Lesen*; wie er Administrator wird, steht unter
+*Benutzer und Rechte*.
+
 ## Lokal starten
 
     ddev start
     ddev launch /admin
+
+E-Mails (z.B. Passwort-Reset) gehen lokal nicht nach draußen, sondern in das Mailpit, das DDEV
+mitbringt:
+
+    ddev mailpit
 
 ## Tests
 
