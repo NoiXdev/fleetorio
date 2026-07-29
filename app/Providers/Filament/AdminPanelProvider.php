@@ -44,6 +44,7 @@ class AdminPanelProvider extends PanelProvider
                 'danger' => Color::Rose,
             ])
             ->login(Login::class)
+            ->passwordReset()
             ->profile()
             ->multiFactorAuthentication([
                 AppAuthentication::make()

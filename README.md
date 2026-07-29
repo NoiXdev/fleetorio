@@ -38,9 +38,10 @@ immer einen Benutzer mit der Rolle *Nur-Lesen*, und `/admin/users` ist für dies
     ddev artisan tinker
     App\Models\User::where('email', '…')->firstOrFail()->update(['role' => 'admin', 'can_view_costs' => true]);
 
-Ein Passwort-Reset ist bewusst nicht eingerichtet (`->passwordReset()` ist im Panel nicht
-gesetzt). Wer sein Passwort vergisst, braucht einen anderen Administrator, der ihm über die
-Benutzerverwaltung ein neues setzt.
+Auf der Anmeldeseite steht ein Passwort-Reset-Link zur Verfügung (`->passwordReset()`).
+Anfragen sind auf 2 Versuche pro Minute begrenzt (Filaments eingebautes Rate-Limiting).
+Lokal landen die Reset-Mails in Mailpit (`ddev launch :8025`, siehe `ddev describe`) — dafür
+ist `.env` bereits auf `MAIL_MAILER=smtp` mit Mailpits Host und Port eingerichtet.
 
 Zwei-Faktor-Authentisierung per Authenticator-App ist derzeit freiwillig (Wunsch des
 Auftraggebers) und lässt sich über die Profilseite einrichten; Recovery-Codes werden dabei
@@ -63,7 +64,12 @@ einmalig angezeigt — sicher aufbewahren. Um 2FA später wieder verpflichtend z
 - Sessions laufen nach 60 Minuten Inaktivität ab und enden zusätzlich beim Schließen des
   Browsers (`SESSION_LIFETIME=60`, `SESSION_EXPIRE_ON_CLOSE=true`).
 - Login-Versuche werden von Filament serverseitig gedrosselt (5 Fehlversuche, 60 Sekunden
-  Sperre) — fest im Vendor-Code, keine Konfiguration nötig.
+  Sperre) — fest im Vendor-Code, keine Konfiguration nötig. Passwort-Reset-Anfragen sind
+  ebenso gedrosselt (2 Versuche, 60 Sekunden Sperre).
+- **Echten Mailversand konfigurieren.** `MAIL_MAILER` und die zugehörigen Werte zeigen lokal
+  auf Mailpit; ohne einen echten SMTP-Versand (oder z. B. SES/Postmark) in der Cloud läuft der
+  Passwort-Reset-Link auf der Anmeldeseite ins Leere — die Mail wird zwar "erfolgreich"
+  verarbeitet, kommt aber nirgends an.
 - Datenbank-Backups einrichten.
 - Queue: siehe Notiz unten zum Export.
 
