@@ -71,6 +71,21 @@ it('breaks down active vehicles by fuel type', function () {
         ->assertSee('1 Elektro');
 });
 
+it('sorts the fuel type breakdown by count, then by enum order on ties', function () {
+    // Diesel hat eine eindeutig höchste Anzahl (3) und muss zuerst stehen.
+    // Benzin und Elektro sind mit je 1 gleichauf - der Tiebreak ist die
+    // Deklarationsreihenfolge der Enum (Petrol vor Electric), nicht die
+    // Erstellungsreihenfolge der Fahrzeuge (hier absichtlich Electric zuerst
+    // angelegt, um das zu erzwingen).
+    Vehicle::factory()->create(['fuel_type' => FuelType::Electric, 'lease_end' => today()->addYears(2)]);
+    Vehicle::factory()->count(3)->create(['fuel_type' => FuelType::Diesel, 'lease_end' => today()->addYears(2)]);
+    Vehicle::factory()->create(['fuel_type' => FuelType::Petrol, 'lease_end' => today()->addYears(2)]);
+
+    $stat = findStatByLabel(fleetOverviewStats(), 'Aktive Fahrzeuge');
+
+    expect($stat->getDescription())->toBe('3 Diesel · 1 Benzin · 1 Elektro');
+});
+
 it('names the vehicle whose lease expires next', function () {
     Vehicle::factory()->create([
         'license_plate' => 'M-AB 1234',
@@ -86,6 +101,30 @@ it('names the vehicle whose lease expires next', function () {
     livewire(FleetOverview::class)
         ->assertSee('M-AB 1234')
         ->assertSee('34');
+});
+
+it('flags urgency when the next lease ends within 90 days', function () {
+    Vehicle::factory()->create(['lease_end' => today()->addDays(45)]);
+
+    $stat = findStatByLabel(fleetOverviewStats(), 'Nächstes Leasingende');
+
+    expect($stat->getColor())->toBe('danger');
+});
+
+it('flags a warning when the next lease ends inside the window but beyond 90 days', function () {
+    Vehicle::factory()->create(['lease_end' => today()->addDays(Vehicle::LEASE_WARNING_DAYS - 10)]);
+
+    $stat = findStatByLabel(fleetOverviewStats(), 'Nächstes Leasingende');
+
+    expect($stat->getColor())->toBe('warning');
+});
+
+it('does not flag urgency when the next lease is far beyond the warning window', function () {
+    Vehicle::factory()->create(['lease_end' => today()->addDays(Vehicle::LEASE_WARNING_DAYS + 30)]);
+
+    $stat = findStatByLabel(fleetOverviewStats(), 'Nächstes Leasingende');
+
+    expect($stat->getColor())->toBe('success');
 });
 
 it('reports when no lease is pending', function () {

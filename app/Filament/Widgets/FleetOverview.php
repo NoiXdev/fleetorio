@@ -66,7 +66,20 @@ class FleetOverview extends BaseWidget
         return Stat::make('Nächstes Leasingende', $next->license_plate)
             ->description("{$next->brand} {$next->model} · in {$days} Tagen")
             ->descriptionIcon('heroicon-m-calendar-days')
-            ->color($days <= 90 ? 'danger' : 'warning');
+            // Gleiche vierstufige Skala wie VehiclesTable::configure() und
+            // ExpiringLeases: unter 0 grau, bis 90 Tage dringend, bis
+            // LEASE_WARNING_DAYS eine Warnung, danach unauffällig. Die
+            // Karte zeigt sonst noch bei einem 300-Tage-Termin Orange, obwohl
+            // kein Handlungsbedarf besteht. "gray" ist hier strukturell nicht
+            // erreichbar - die Abfrage filtert bereits auf lease_end >= heute
+            // - bleibt aber aus Konsistenzgründen Teil derselben Skala statt
+            // einer eigenen, engeren Variante.
+            ->color(match (true) {
+                $days < 0 => 'gray',
+                $days <= 90 => 'danger',
+                $days <= Vehicle::LEASE_WARNING_DAYS => 'warning',
+                default => 'success',
+            });
     }
 
     private function expiringCountStat(): Stat

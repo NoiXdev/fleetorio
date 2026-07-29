@@ -3877,9 +3877,13 @@ ddev exec vendor/bin/pest tests/Feature/Filament/DashboardTest.php
 
 Erwartet: PASS, 8 Tests.
 
-Falls `getTableHeading()` nicht greift: alternativ `protected ?string $heading` setzen — dann
-allerdings ohne die Konstante im Text, also den Wert dort ausschreiben und einen Kommentar mit
-Verweis auf `Vehicle::LEASE_WARNING_DAYS` ergänzen.
+**Nachträglich korrigiert:** Der ursprünglich hier genannte Fallback — ein nicht-statisches
+`protected ?string $heading` — ist **falsch und darf nicht verwendet werden.** Die
+Filament-Basisklasse deklariert `$heading` statisch; eine nicht-statische Überschreibung erzeugt
+einen Fatal Error beim Laden der Klasse (`Cannot redeclare static Base::$heading as non static
+Child::$heading`), nicht etwa stillen toten Code. In der Umsetzung war ohnehin kein Fallback
+nötig: `getTableHeading()` greift über normale Polymorphie, die Basisklasse ruft
+`$this->getTableHeading()` auf.
 
 - [ ] **Step 7: Commit**
 
