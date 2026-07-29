@@ -32,8 +32,11 @@ Rechte:
 Der erste Benutzer wird über `ddev artisan make:filament-user` angelegt und anschließend zum
 Administrator gemacht.
 
-Zwei-Faktor-Authentisierung per Authenticator-App ist Pflicht und wird beim ersten Login
-eingerichtet. Recovery-Codes werden dabei einmalig angezeigt — sicher aufbewahren.
+Zwei-Faktor-Authentisierung per Authenticator-App ist derzeit freiwillig (Wunsch des
+Auftraggebers) und lässt sich über die Profilseite einrichten; Recovery-Codes werden dabei
+einmalig angezeigt — sicher aufbewahren. Um 2FA später wieder verpflichtend zu machen,
+`isRequired: true` in `app/Providers/Filament/AdminPanelProvider.php`
+(`->multiFactorAuthentication(...)`) setzen.
 
 ## Betrieb in der Cloud
 

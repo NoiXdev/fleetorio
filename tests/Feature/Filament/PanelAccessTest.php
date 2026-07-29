@@ -18,13 +18,15 @@ it('lets a user with two factor set up reach the dashboard', function () {
     $this->get('/admin')->assertOk();
 });
 
-it('redirects a user without two factor set up to the enrollment page', function () {
-    // Beobachtetes Verhalten (per Debug-Aufruf verifiziert): Ein angemeldeter
-    // Benutzer ohne eingerichtetes 2FA wird von /admin auf die
-    // Einrichtungsseite umgeleitet, statt das Dashboard zu sehen. Das ist die
-    // in der Spezifikation geforderte 2FA-Pflicht - deshalb nutzen alle
-    // weiteren Oberflächentests `withTwoFactor()`.
+it('lets a user without two factor set up reach the dashboard directly', function () {
+    // Beobachtetes Verhalten (per Debug-Aufruf verifiziert): Seit die
+    // 2FA-Pflicht auf Wunsch des Auftraggebers auf isRequired: false gestellt
+    // wurde, erzwingt Filament die Einrichtungsseite nicht mehr. Ein
+    // angemeldeter Benutzer ohne eingerichtetes 2FA erreicht /admin direkt
+    // (200 statt 302 zur Einrichtungsseite). Die Einrichtung bleibt über die
+    // Profilseite weiterhin freiwillig möglich - die vielen Tests mit
+    // `withTwoFactor()` dokumentieren weiterhin den abgesicherten Fall.
     actingAs(User::factory()->admin()->create());
 
-    $this->get('/admin')->assertRedirect('/admin/multi-factor-authentication/set-up');
+    $this->get('/admin')->assertOk();
 });

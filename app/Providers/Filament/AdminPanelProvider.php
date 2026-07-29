@@ -36,7 +36,7 @@ class AdminPanelProvider extends PanelProvider
                 AppAuthentication::make()
                     ->recoverable()
                     ->brandName('Fuhrparkmanagement'),
-            ], isRequired: true)
+            ], isRequired: false)
             ->navigationGroups([
                 'Fuhrpark',
                 'Stammdaten',
