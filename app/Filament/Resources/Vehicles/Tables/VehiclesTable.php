@@ -8,6 +8,7 @@ use App\Filament\Exports\VehicleExporter;
 use App\Models\Vehicle;
 use Filament\Actions\EditAction;
 use Filament\Actions\ExportAction;
+use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -79,7 +80,16 @@ class VehiclesTable
             // verlieren, ist ein zu großes Risiko für einen Bequemlichkeitsgewinn.
             // Einzelnes Löschen bleibt auf der Edit-Seite verfügbar (nur Admins,
             // siehe VehiclePolicy::delete).
+            //
+            // Der Klick auf eine Zeile fuehrt bereits automatisch zur
+            // Anzeigeseite: Filament setzt recordUrl() selbst, sobald die
+            // Ressource eine 'view'-Seite registriert (siehe Filament\
+            // Resources\Pages\ListRecords::table(), der Block
+            // "if (! $table->hasCustomRecordUrl())"), kein eigenes
+            // ->recordUrl() noetig. Die ViewAction unten ist der zusaetzliche
+            // Weg ueber das Aktionsmenue.
             ->recordActions([
+                ViewAction::make(),
                 EditAction::make(),
             ]);
     }

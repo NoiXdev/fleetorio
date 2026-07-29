@@ -83,19 +83,14 @@ Kostenübersicht gegen diese Konfiguration verifiziert (echte Dateien, korrekte 
 Sollte künftig auf `database` umgestellt werden, muss ein Worker laufen
 (`php artisan queue:work`, überwacht durch systemd oder Supervisor).
 
-## Bekannte Lücken
+## Fahrzeug-Detailseite
 
-**Keine Detailansicht für Nur-Lese-Nutzer.** Ein einzelnes Fahrzeug lässt sich derzeit nur über
-das Bearbeitungsformular ansehen, und das ist Administratoren vorbehalten. Für einen Nutzer mit
-der Rolle *Nur-Lesen* sind Leasinggeber, Tankkarte, Leasingstart und Notizen damit nirgends
-sichtbar — die Fahrzeugliste zeigt sie nicht, die Kostenseite nur Kennzeichen und Beträge.
-
-Die Spezifikation sieht vor, dass *Nur-Lesen* alles sehen darf. Solange ausschließlich
-Administratoren mit der Anwendung arbeiten, fällt die Lücke nicht auf; sobald die Buchhaltung
-einen eigenen Zugang bekommt, sollte eine Leseansicht (`ViewRecord` mit Infolist, dieselbe
-Abschnittsstruktur wie das Formular inklusive der Sichtbarkeitsbedingung auf dem Kostenblock)
-nachgezogen werden. `VehiclePolicy::view()` gibt bereits `true` zurück und ist bis dahin
-ungenutzt.
+Ein Klick auf eine Zeile in der Fahrzeugliste führt zu einer Anzeigeseite (dieselbe
+Abschnittsstruktur wie das Bearbeitungsformular, Kostenblock ebenso an `viewCosts` gebunden),
+nicht direkt in den Bearbeitungsmodus. Von dort führt die Schaltfläche *Daten bearbeiten* zur
+Bearbeitungsseite — sichtbar nur für Administratoren (`VehiclePolicy::update`). Ein Nutzer mit
+der Rolle *Nur-Lesen* erreicht die Anzeigeseite und sieht dort auch die Terminhistorie, jedoch
+ohne Möglichkeit, etwas anzulegen oder zu ändern.
 
 ## Bekannte Altlasten
 
