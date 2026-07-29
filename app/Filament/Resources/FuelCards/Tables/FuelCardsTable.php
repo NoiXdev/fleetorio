@@ -4,7 +4,6 @@ namespace App\Filament\Resources\FuelCards\Tables;
 
 use App\Enums\FuelCardProvider;
 use App\Filament\Actions\GuardedDeleteAction;
-use App\Models\FuelCard;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -20,14 +19,13 @@ class FuelCardsTable
                     ->label('Anbieter')
                     ->badge()
                     ->sortable(),
-                // Die Kartennummer ist verschlüsselt und daher nicht durchsuchbar.
-                // Auch die Anzeige bleibt sparsam: Anbieter plus die letzten vier
-                // Stellen statt der vollen Nummer im Klartext (siehe
-                // FuelCard::maskedNumber()); die volle Nummer bleibt dem
-                // Bearbeitungsformular vorbehalten.
+                // Die Kartennummer ist verschluesselt und daher nicht durchsuchbar.
+                // Die volle Nummer wird bewusst angezeigt (Auftraggeber-Entscheidung):
+                // beide Stellen, die sie zeigen, sind nur angemeldeten Nutzern
+                // zugaenglich, und die Karten werden ohnehin in dieser Anwendung
+                // verwaltet. Der encrypted-Cast schuetzt weiterhin die Datenbank.
                 TextColumn::make('card_number')
-                    ->label('Kartennummer')
-                    ->formatStateUsing(fn (FuelCard $record): string => $record->maskedNumber()),
+                    ->label('Kartennummer'),
                 TextColumn::make('valid_until')
                     ->label('Gültig bis')
                     ->date('d.m.Y')

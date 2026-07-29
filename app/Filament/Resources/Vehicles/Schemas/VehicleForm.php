@@ -65,12 +65,13 @@ class VehicleForm
                             ->preload(),
                         Select::make('fuel_card_id')
                             ->label('Tankkarte')
-                            // Die Kartennummer ist verschluesselt und im Model
-                            // als $hidden gefuehrt; die Auswahl zeigt daher nur
-                            // Anbieter plus die letzten vier Stellen, nicht die
-                            // volle Nummer im Klartext.
+                            // Anbieter + volle Nummer (Auftraggeber-Entscheidung),
+                            // damit man bei mehreren Anbietern nicht raten muss.
+                            // Der encrypted-Cast schuetzt weiterhin die Datenbank.
                             ->relationship('fuelCard', 'card_number')
-                            ->getOptionLabelFromRecordUsing(fn ($record): string => $record->maskedNumber())
+                            ->getOptionLabelFromRecordUsing(
+                                fn ($record): string => "{$record->provider->getLabel()} {$record->card_number}"
+                            )
                             ->placeholder('Auswählen')
                             ->preload(),
                     ]),

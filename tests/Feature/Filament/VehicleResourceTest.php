@@ -1,11 +1,13 @@
 <?php
 
+use App\Enums\FuelCardProvider;
 use App\Enums\FuelType;
 use App\Enums\VehicleStatus;
 use App\Filament\Resources\Vehicles\Pages\CreateVehicle;
 use App\Filament\Resources\Vehicles\Pages\EditVehicle;
 use App\Filament\Resources\Vehicles\Pages\ListVehicles;
 use App\Models\Employee;
+use App\Models\FuelCard;
 use App\Models\User;
 use App\Models\Vehicle;
 use Filament\Actions\CreateAction;
@@ -132,6 +134,21 @@ it('rejects a duplicate licence plate', function () {
         ])
         ->call('create')
         ->assertHasFormErrors(['license_plate' => 'unique']);
+});
+
+it('labels the fuel card option with provider and full card number', function () {
+    // Auftraggeber-Entscheidung: Die Zuordnung war mit der maskierten Nummer
+    // umstaendlich. Anbieter + volle Nummer, damit man bei mehreren Anbietern
+    // nicht raten muss.
+    actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+    FuelCard::factory()->create([
+        'provider' => FuelCardProvider::Dkv,
+        'card_number' => '7080123456789',
+    ]);
+
+    livewire(CreateVehicle::class)
+        ->assertSee('DKV 7080123456789');
 });
 
 it('shows a short placeholder instead of Filaments default long one on the selects without a default value', function () {

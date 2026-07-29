@@ -58,9 +58,11 @@ it('filters by provider', function () {
         ->assertCanNotSeeTableRecords([$elli]);
 });
 
-it('does not show the full card number in the list, only provider and last four digits', function () {
-    // Die Nummer ist verschluesselt und im Model als $hidden gefuehrt; die
-    // Liste soll sie nicht im Klartext ausbreiten (siehe FuelCard::maskedNumber()).
+it('shows the full card number in the list', function () {
+    // Auftraggeber-Entscheidung: Die Zuordnung war mit der maskierten Nummer
+    // umstaendlich. Beide Stellen (Tankkartenliste, Fahrzeugformular) sind
+    // ohnehin nur angemeldeten Nutzern zugaenglich; der encrypted-Cast am
+    // Model schuetzt weiterhin die Datenbank, nicht die Anzeige.
     $card = FuelCard::factory()->create([
         'provider' => FuelCardProvider::Dkv,
         'card_number' => '7080999886789',
@@ -68,8 +70,7 @@ it('does not show the full card number in the list, only provider and last four 
 
     livewire(ListFuelCards::class)
         ->assertOk()
-        ->assertSee('DKV ····6789')
-        ->assertDontSee('7080999886789');
+        ->assertSee('7080999886789');
 });
 
 it('refuses to delete a card that is still assigned', function () {
