@@ -37,11 +37,18 @@ class VehicleForm
                             ->label('Antriebsart')
                             ->options(FuelType::class)
                             ->native(false)
+                            // Kein Standardwert - ohne eigenen Platzhalter würde
+                            // Filaments deutsche Übersetzung "Wählen Sie eine
+                            // Option" zeigen (vendor/filament/forms/resources/
+                            // lang/de/components.php, select.placeholder).
+                            ->placeholder('Auswählen')
                             ->required(),
                         Select::make('status')
                             ->label('Status')
                             ->options(VehicleStatus::class)
                             ->native(false)
+                            // Hat einen Standardwert - ein Platzhalter würde hier
+                            // nie angezeigt, daher bewusst kein ->placeholder().
                             ->default(VehicleStatus::Active->value)
                             ->required(),
                     ]),
@@ -54,6 +61,7 @@ class VehicleForm
                             ->relationship('employee', 'last_name')
                             ->getOptionLabelFromRecordUsing(fn ($record): string => $record->full_name)
                             ->searchable(['first_name', 'last_name'])
+                            ->placeholder('Auswählen')
                             ->preload(),
                         Select::make('fuel_card_id')
                             ->label('Tankkarte')
@@ -63,6 +71,7 @@ class VehicleForm
                             // volle Nummer im Klartext.
                             ->relationship('fuelCard', 'card_number')
                             ->getOptionLabelFromRecordUsing(fn ($record): string => $record->maskedNumber())
+                            ->placeholder('Auswählen')
                             ->preload(),
                     ]),
 
@@ -73,6 +82,7 @@ class VehicleForm
                             ->label('Leasinggeber')
                             ->relationship('leasingCompany', 'name')
                             ->searchable()
+                            ->placeholder('Auswählen')
                             ->preload(),
                         // Native statt Filaments eigenem Picker: Der eigene Picker
                         // rendert das sichtbare Feld als readonly-Input in einem

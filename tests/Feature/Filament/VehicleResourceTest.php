@@ -134,6 +134,26 @@ it('rejects a duplicate licence plate', function () {
         ->assertHasFormErrors(['license_plate' => 'unique']);
 });
 
+it('shows a short placeholder instead of Filaments default long one on the selects without a default value', function () {
+    // Filaments deutsche Übersetzung setzt fuer Select-Felder ohne eigenen
+    // Platzhalter den Text "Wählen Sie eine Option" (siehe vendor/filament/
+    // forms/resources/lang/de/components.php, Schluessel select.placeholder).
+    // Das betrifft hier nicht nur den Leasinggeber, sondern auch Mitarbeiter,
+    // Tankkarte und Antriebsart - alle vier haben keinen Standardwert.
+    //
+    // Status hat einen Standardwert (VehicleStatus::Active) und zeigt daher
+    // nie sichtbar einen Platzhalter; er bleibt bewusst unangetastet - sein
+    // interner JS-Konfigurationswert traegt also weiterhin den langen Text
+    // (nie gerendert), weshalb dieser Test die restliche Zahl der Treffer
+    // prueft statt pauschal auf Abwesenheit.
+    actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+    $html = livewire(CreateVehicle::class)->html();
+
+    expect(substr_count($html, 'Wählen Sie eine Option'))->toBe(1)
+        ->and(substr_count($html, 'Auswählen'))->toBe(4);
+});
+
 it('renders lease start and end as native date inputs so they can be typed', function () {
     // Filaments eigener Picker (native(false)) rendert das sichtbare Feld als
     // readonly-Input in einem Button (siehe vendor/filament/forms/src/
