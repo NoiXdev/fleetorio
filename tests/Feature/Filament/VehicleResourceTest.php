@@ -16,6 +16,19 @@ use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\assertDatabaseMissing;
 use function Pest\Livewire\livewire;
 
+it('shows the vehicle list without crashing when a vehicle has no lease end', function () {
+    // Die Spalte "Leasingende" berechnet aus lease_end die Resttage und daraus
+    // eine Farbe; bei null darf das nicht (mehr) crashen.
+    actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+    $vehicle = Vehicle::factory()->withoutLeaseDates()->create();
+
+    livewire(ListVehicles::class)
+        ->assertOk()
+        ->assertCanSeeTableRecords([$vehicle])
+        ->assertSee('—');
+});
+
 it('lists active vehicles by default and hides retired ones', function () {
     actingAs(User::factory()->admin()->withTwoFactor()->create());
 
@@ -121,6 +134,20 @@ it('rejects a duplicate licence plate', function () {
         ->assertHasFormErrors(['license_plate' => 'unique']);
 });
 
+it('renders lease start and end as native date inputs so they can be typed', function () {
+    // Filaments eigener Picker (native(false)) rendert das sichtbare Feld als
+    // readonly-Input in einem Button (siehe vendor/filament/forms/src/
+    // Components/DateTimePicker.php) - eine Tastatureingabe ist dort gar
+    // nicht moeglich. Das native Browser-Datumsfeld ist es hingegen.
+    actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+    $html = livewire(CreateVehicle::class)->html();
+
+    expect($html)->toContain('id="form.lease_start"')
+        ->toContain('id="form.lease_end"')
+        ->not->toContain('fi-fo-date-time-picker-display-text-input');
+});
+
 it('rejects a lease end before the lease start', function () {
     actingAs(User::factory()->admin()->withTwoFactor()->create());
 
@@ -135,6 +162,94 @@ it('rejects a lease end before the lease start', function () {
         ])
         ->call('create')
         ->assertHasFormErrors(['lease_end']);
+});
+
+describe('optional lease dates', function () {
+    // Leasingstart und Leasingende sind seit diesem Wunsch keine Pflichtfelder
+    // mehr. ->after('lease_start') muss weiterhin greifen, wenn beide Felder
+    // gefuellt sind, darf aber nicht stoeren, wenn eines oder beide leer sind.
+
+    it('allows creating a vehicle with neither lease date set', function () {
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        livewire(CreateVehicle::class)
+            ->fillForm([
+                'brand' => 'VW',
+                'model' => 'Golf',
+                'license_plate' => 'M-LD 0001',
+                'fuel_type' => FuelType::Diesel->value,
+                'lease_start' => null,
+                'lease_end' => null,
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        assertDatabaseHas(Vehicle::class, [
+            'license_plate' => 'M-LD 0001',
+            'lease_start' => null,
+            'lease_end' => null,
+        ]);
+    });
+
+    it('allows creating a vehicle with only a lease start date', function () {
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        livewire(CreateVehicle::class)
+            ->fillForm([
+                'brand' => 'VW',
+                'model' => 'Golf',
+                'license_plate' => 'M-LD 0002',
+                'fuel_type' => FuelType::Diesel->value,
+                'lease_start' => '2026-01-01',
+                'lease_end' => null,
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        assertDatabaseHas(Vehicle::class, [
+            'license_plate' => 'M-LD 0002',
+            'lease_end' => null,
+        ]);
+    });
+
+    it('allows creating a vehicle with only a lease end date', function () {
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        livewire(CreateVehicle::class)
+            ->fillForm([
+                'brand' => 'VW',
+                'model' => 'Golf',
+                'license_plate' => 'M-LD 0003',
+                'fuel_type' => FuelType::Diesel->value,
+                'lease_start' => null,
+                'lease_end' => '2029-01-01',
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        assertDatabaseHas(Vehicle::class, [
+            'license_plate' => 'M-LD 0003',
+            'lease_start' => null,
+        ]);
+    });
+
+    it('still rejects a lease end before the lease start when both are set', function () {
+        // Deckt denselben Fall wie oben ab, hier bewusst innerhalb der
+        // describe-Gruppe zur optionalen Pflicht dokumentiert.
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        livewire(CreateVehicle::class)
+            ->fillForm([
+                'brand' => 'VW',
+                'model' => 'Golf',
+                'license_plate' => 'M-LD 0004',
+                'fuel_type' => FuelType::Diesel->value,
+                'lease_start' => '2029-01-01',
+                'lease_end' => '2026-01-01',
+            ])
+            ->call('create')
+            ->assertHasFormErrors(['lease_end']);
+    });
 });
 
 it('rejects negative amounts', function (string $field) {

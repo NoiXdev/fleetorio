@@ -87,6 +87,14 @@ describe('lease expiry window', function () {
 
         expect(Vehicle::leaseEndingWithin(180)->count())->toBe(0);
     });
+
+    it('excludes a vehicle without a lease end at all', function () {
+        // whereBetween() schliesst NULL automatisch aus (SQL: NULL BETWEEN
+        // x AND y ist NULL, also falsy) - hier verifiziert statt angenommen.
+        Vehicle::factory()->withoutLeaseDates()->create();
+
+        expect(Vehicle::leaseEndingWithin(180)->count())->toBe(0);
+    });
 });
 
 it('uses a 180 day warning window', function () {

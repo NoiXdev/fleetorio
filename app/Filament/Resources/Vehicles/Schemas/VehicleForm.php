@@ -74,16 +74,17 @@ class VehicleForm
                             ->relationship('leasingCompany', 'name')
                             ->searchable()
                             ->preload(),
+                        // Native statt Filaments eigenem Picker: Der eigene Picker
+                        // rendert das sichtbare Feld als readonly-Input in einem
+                        // Button (vendor/filament/forms/src/Components/
+                        // DateTimePicker.php) - eine Tastatureingabe ist dort nicht
+                        // moeglich. Das native Feld ist es und zeigt im deutschen
+                        // Browser TT.MM.JJJJ; ->displayFormat() wirkt bei ihm nicht
+                        // und entfaellt daher.
                         DatePicker::make('lease_start')
-                            ->label('Leasingstart')
-                            ->native(false)
-                            ->displayFormat('d.m.Y')
-                            ->required(),
+                            ->label('Leasingstart'),
                         DatePicker::make('lease_end')
                             ->label('Leasingende')
-                            ->native(false)
-                            ->displayFormat('d.m.Y')
-                            ->required()
                             ->after('lease_start'),
                     ]),
 

@@ -64,3 +64,28 @@ it('actually runs the export under the sync queue and writes a file without cost
     $rows = trim($disk->get($dataFile));
     expect(substr_count($rows, "\n") + 1)->toBe(3);
 });
+
+it('exports a vehicle without lease dates without failing rows', function () {
+    // lease_start und lease_end sind seit diesem Wunsch optional; der Export
+    // darf bei fehlenden Werten weder abstuerzen noch die Zeile als
+    // fehlgeschlagen zaehlen.
+    config()->set('queue.default', 'sync');
+    Storage::fake('local');
+
+    actingAs(User::factory()->admin()->withCostAccess()->withTwoFactor()->create());
+
+    Vehicle::factory()->withoutLeaseDates()->create();
+
+    $columnMap = collect(VehicleExporter::getColumns())
+        ->mapWithKeys(fn ($column) => [$column->getName() => ['isEnabled' => true, 'label' => $column->getLabel()]])
+        ->all();
+
+    livewire(ListVehicles::class)
+        ->callTableAction('export', data: ['columnMap' => $columnMap])
+        ->assertHasNoTableActionErrors();
+
+    $export = Export::latest('id')->first();
+
+    expect($export->successful_rows)->toBe(1)
+        ->and($export->getFailedRowsCount())->toBe(0);
+});

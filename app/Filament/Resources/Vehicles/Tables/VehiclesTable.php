@@ -41,9 +41,17 @@ class VehiclesTable
                     ->label('Leasingende')
                     ->date('d.m.Y')
                     ->badge()
-                    ->color(fn (Vehicle $record): string => Vehicle::leaseUrgencyColor(
-                        (int) today()->diffInDays($record->lease_end, false)
-                    ))
+                    // Ohne Leasingende (seit diesem Wunsch moeglich) gibt es weder ein
+                    // Datum noch eine Dringlichkeit anzuzeigen. Filament rendert eine
+                    // leere Spalte ueber den Placeholder-Zweig, *bevor* formatState()
+                    // oder die color()-Closure ueberhaupt aufgerufen werden (siehe
+                    // vendor/filament/tables/src/Columns/TextColumn.php,
+                    // toEmbeddedHtml(), der blank($state)-Zweig) - der Platzhalter
+                    // erscheint also automatisch ohne Farbmarkierung.
+                    ->placeholder('—')
+                    ->color(fn (Vehicle $record): ?string => $record->lease_end === null
+                        ? null
+                        : Vehicle::leaseUrgencyColor((int) today()->diffInDays($record->lease_end, false)))
                     ->sortable(),
                 TextColumn::make('status')
                     ->label('Status')

@@ -36,4 +36,16 @@ class VehicleFactory extends Factory
             'status' => VehicleStatus::Retired,
         ]);
     }
+
+    /**
+     * Fahrzeug ohne erfassten Leasingvertrag: lease_start und lease_end sind
+     * seit diesem Wunsch optional (Migration 2026_07_29_090000).
+     */
+    public function withoutLeaseDates(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'lease_start' => null,
+            'lease_end' => null,
+        ]);
+    }
 }

@@ -135,6 +135,17 @@ it('reports when no lease is pending', function () {
         ->assertSee('Keine');
 });
 
+it('ignores a vehicle without a lease end for the next-lease-end stat', function () {
+    // Vehicle::factory()->withoutLeaseDates() hat weder lease_start noch
+    // lease_end (seit diesem Wunsch optional). Die Abfrage filtert auf
+    // lease_end >= heute, was NULL automatisch ausschliesst - ohne Absturz.
+    Vehicle::factory()->withoutLeaseDates()->create();
+
+    livewire(FleetOverview::class)
+        ->assertOk()
+        ->assertSee('Keine');
+});
+
 it('lists leases expiring inside the warning window', function () {
     $soon = Vehicle::factory()->create(['lease_end' => today()->addDays(30)]);
     $edge = Vehicle::factory()->create(['lease_end' => today()->addDays(Vehicle::LEASE_WARNING_DAYS)]);
@@ -146,6 +157,16 @@ it('lists leases expiring inside the warning window', function () {
         ->assertOk()
         ->assertCanSeeTableRecords([$soon, $edge])
         ->assertCanNotSeeTableRecords([$later, $expired, $retired]);
+});
+
+it('excludes a vehicle without a lease end from the expiring leases widget', function () {
+    $withoutDates = Vehicle::factory()->withoutLeaseDates()->create();
+    $expiring = Vehicle::factory()->create(['lease_end' => today()->addDays(30)]);
+
+    livewire(ExpiringLeases::class)
+        ->assertOk()
+        ->assertCanSeeTableRecords([$expiring])
+        ->assertCanNotSeeTableRecords([$withoutDates]);
 });
 
 it('shows the driver of an expiring vehicle', function () {
