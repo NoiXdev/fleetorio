@@ -31,16 +31,38 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogo(asset('images/a3b-logo.svg'))
             ->brandLogoHeight('2rem')
             ->favicon(asset('images/a3b-logo.png'))
-            // Primärfarbe ist das Markenrot (#bb0000). Filament nutzt
-            // standardmäßig Rot auch für 'danger' (Löschbestätigungen,
-            // Fehler, Warnungen) - mit rotem Primärton wäre ein
-            // "Speichern"-Knopf nicht mehr von einem "Löschen"-Knopf zu
-            // unterscheiden. Deshalb ist 'danger' auf Color::Rose verschoben:
-            // deutlich pinker und heller als das Markenrot, aber weiterhin
-            // klar als Warnfarbe erkennbar. 'warning' und 'success' bleiben
-            // unverändert.
+            // Primärfarbe ist das Markenrot #bb0000 = oklch(0.497 0.204 29.234).
+            //
+            // Die Palette steht hier ausgeschrieben, weil Color::hex() sie nicht
+            // treffen kann: Diese Methode übernimmt aus der Eingabefarbe nur den
+            // Farbwinkel und ersetzt Helligkeit und Sättigung durch feste Werte
+            // (siehe Color::generatePalette()). Für Stufe 600 - die Filament in
+            // Schaltflächen am häufigsten verwendet - käme oklch(0.598 0.169 …)
+            // heraus: heller und blasser als das Markenrot.
+            //
+            // Deshalb liegt #bb0000 unten exakt auf Stufe 600. Die helleren
+            // Stufen behalten Filaments Kurve (sie dienen Hintergründen und
+            // Abzeichen und sollen hell bleiben), die Stufen ab 400 führen zum
+            // Markenrot hin und darüber hinaus ins Dunkle.
+            //
+            // 'danger' ist auf Rose verschoben: Filament nutzt es für
+            // Löschbestätigungen, Fehler und Warnungen. Bliebe es rot, wäre ein
+            // "Speichern"-Knopf nicht von einem "Löschen"-Knopf zu
+            // unterscheiden. 'warning' und 'success' bleiben unverändert.
             ->colors([
-                'primary' => Color::hex('#bb0000'),
+                'primary' => [
+                    50 => 'oklch(0.977 0.014 29.234)',
+                    100 => 'oklch(0.950 0.033 29.234)',
+                    200 => 'oklch(0.905 0.063 29.234)',
+                    300 => 'oklch(0.840 0.106 29.234)',
+                    400 => 'oklch(0.740 0.170 29.234)',
+                    500 => 'oklch(0.620 0.195 29.234)',
+                    600 => 'oklch(0.497 0.204 29.234)', // #bb0000
+                    700 => 'oklch(0.440 0.185 29.234)',
+                    800 => 'oklch(0.390 0.160 29.234)',
+                    900 => 'oklch(0.345 0.135 29.234)',
+                    950 => 'oklch(0.250 0.090 29.234)',
+                ],
                 'danger' => Color::Rose,
             ])
             ->login(Login::class)
