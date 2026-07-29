@@ -7,6 +7,11 @@ Leasingzeiträume und Kosten.
 
 Laravel 13, Filament 5, MariaDB, DDEV für die lokale Entwicklung.
 
+**PHP 8.4 ist Mindestanforderung** — nicht 8.3. Die gelockte Version von
+`symfony/console` verlangt PHP ≥ 8.4.1; ein Build auf 8.3 scheitert beim
+`composer install`. Beim Hosting also PHP 8.4 verlangen, zusammen mit der
+Erweiterung `intl` (die fordert Filament).
+
 ## Frisch aufsetzen (nach dem Klonen)
 
 `vendor/` und `.env` liegen nicht im Repository, ein Klon braucht deshalb einmalig:
