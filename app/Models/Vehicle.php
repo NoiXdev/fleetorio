@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -29,6 +30,21 @@ class Vehicle extends Model
      */
     public const LEASE_URGENT_DAYS = 90;
 
+    /**
+     * Vorlaufzeit, ab der eine faellige HU auf dem Dashboard gemeldet wird -
+     * man kann zwei Monate vor Ablauf zur Pruefung.
+     */
+    public const INSPECTION_WARNING_DAYS = 60;
+
+    /**
+     * Dringlichkeitsschwelle innerhalb des HU-Fensters. LEASE_URGENT_DAYS
+     * (90) und LEASE_WARNING_DAYS (180) passen hier nicht: Das HU-Fenster ist
+     * nur 60 Tage breit, jeder Resttag darin waere mit der Leasing-Schwelle
+     * "danger". Also dieselbe Quote wie beim Leasing (die Haelfte des
+     * Fensters gilt als dringend: 90 von 180) auf 60 Tage angewandt.
+     */
+    public const INSPECTION_URGENT_DAYS = 30;
+
     protected $fillable = [
         'brand',
         'model',
@@ -40,6 +56,7 @@ class Vehicle extends Model
         'dealership_id',
         'lease_start',
         'lease_end',
+        'inspection_valid_until',
         'monthly_lease_rate',
         'annual_vehicle_tax',
         'annual_insurance',
@@ -54,6 +71,7 @@ class Vehicle extends Model
             'status' => VehicleStatus::class,
             'lease_start' => 'date',
             'lease_end' => 'date',
+            'inspection_valid_until' => 'date',
             'monthly_lease_rate' => 'decimal:2',
             'annual_vehicle_tax' => 'decimal:2',
             'annual_insurance' => 'decimal:2',
@@ -86,6 +104,14 @@ class Vehicle extends Model
     }
 
     /**
+     * Absteigend nach Datum, damit der juengste Termin oben steht.
+     */
+    public function appointments(): HasMany
+    {
+        return $this->hasMany(VehicleAppointment::class)->orderByDesc('date');
+    }
+
+    /**
      * Der decimal-Cast liefert Strings, daher die explizite float-Umwandlung.
      */
     protected function annualTotalCost(): Attribute
@@ -104,6 +130,22 @@ class Vehicle extends Model
     {
         return $query->active()
             ->whereBetween('lease_end', [today(), today()->addDays($days)]);
+    }
+
+    /**
+     * Fahrzeuge, deren HU in den naechsten $days Tagen faellig wird (beide
+     * Grenzen eingeschlossen). Bewusst gegen inspection_valid_until statt
+     * gegen den letzten HU-Termin berechnet - siehe Kommentar an der
+     * Migration add_inspection_valid_until_to_vehicles_table: die
+     * HU-Intervalle sind nicht einheitlich (Neuwagen drei Jahre, danach
+     * zwei), und der Wert steht direkt auf der Plakette und im
+     * Fahrzeugschein. Fahrzeuge ohne Eintrag erscheinen nicht (NULL BETWEEN
+     * ist NULL, also falsy).
+     */
+    public function scopeInspectionDueWithin(Builder $query, int $days): Builder
+    {
+        return $query->active()
+            ->whereBetween('inspection_valid_until', [today(), today()->addDays($days)]);
     }
 
     /**
@@ -187,6 +229,24 @@ class Vehicle extends Model
             $daysLeft < 0 => 'gray',
             $daysLeft <= self::LEASE_URGENT_DAYS => 'danger',
             $daysLeft <= self::LEASE_WARNING_DAYS => 'warning',
+            default => 'success',
+        };
+    }
+
+    /**
+     * Dieselbe vierstufige Form wie leaseUrgencyColor(), aber mit eigenen
+     * Schwellen (INSPECTION_URGENT_DAYS/INSPECTION_WARNING_DAYS): das
+     * 60-Tage-HU-Fenster ist zu schmal fuer die Leasing-Schwellen 90/180 -
+     * jeder darin gemeldete Resttag waere sonst immer "danger". Nicht
+     * wiederverwendet, sondern bewusst eine eigene Methode fuer eine eigene
+     * Skala.
+     */
+    public static function inspectionUrgencyColor(int $daysLeft): string
+    {
+        return match (true) {
+            $daysLeft < 0 => 'gray',
+            $daysLeft <= self::INSPECTION_URGENT_DAYS => 'danger',
+            $daysLeft <= self::INSPECTION_WARNING_DAYS => 'warning',
             default => 'success',
         };
     }

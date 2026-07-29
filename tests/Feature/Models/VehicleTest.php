@@ -7,6 +7,7 @@ use App\Models\Employee;
 use App\Models\FuelCard;
 use App\Models\LeasingCompany;
 use App\Models\Vehicle;
+use App\Models\VehicleAppointment;
 use Illuminate\Database\QueryException;
 
 it('sums annual total cost from lease rate, tax and insurance', function () {
@@ -124,6 +125,72 @@ describe('lease urgency color', function () {
     });
 });
 
+describe('inspection due window', function () {
+    it('includes an inspection due today', function () {
+        Vehicle::factory()->create(['inspection_valid_until' => today()]);
+
+        expect(Vehicle::inspectionDueWithin(60)->count())->toBe(1);
+    });
+
+    it('includes an inspection due exactly at the window edge', function () {
+        Vehicle::factory()->create(['inspection_valid_until' => today()->addDays(60)]);
+
+        expect(Vehicle::inspectionDueWithin(60)->count())->toBe(1);
+    });
+
+    it('excludes an inspection due one day beyond the window', function () {
+        Vehicle::factory()->create(['inspection_valid_until' => today()->addDays(61)]);
+
+        expect(Vehicle::inspectionDueWithin(60)->count())->toBe(0);
+    });
+
+    it('excludes an inspection that already expired', function () {
+        Vehicle::factory()->create(['inspection_valid_until' => today()->subDay()]);
+
+        expect(Vehicle::inspectionDueWithin(60)->count())->toBe(0);
+    });
+
+    it('excludes retired vehicles even inside the window', function () {
+        Vehicle::factory()->retired()->create(['inspection_valid_until' => today()->addDays(10)]);
+
+        expect(Vehicle::inspectionDueWithin(60)->count())->toBe(0);
+    });
+
+    it('excludes a vehicle without an inspection date at all', function () {
+        // whereBetween() schliesst NULL automatisch aus (SQL: NULL BETWEEN
+        // x AND y ist NULL, also falsy).
+        Vehicle::factory()->create(['inspection_valid_until' => null]);
+
+        expect(Vehicle::inspectionDueWithin(60)->count())->toBe(0);
+    });
+});
+
+it('uses a 60 day inspection warning window', function () {
+    expect(Vehicle::INSPECTION_WARNING_DAYS)->toBe(60);
+});
+
+describe('inspection urgency color', function () {
+    it('marks an already expired inspection as gray', function () {
+        expect(Vehicle::inspectionUrgencyColor(-1))->toBe('gray');
+    });
+
+    it('marks exactly the urgent threshold as danger', function () {
+        expect(Vehicle::inspectionUrgencyColor(Vehicle::INSPECTION_URGENT_DAYS))->toBe('danger');
+    });
+
+    it('marks one day past the urgent threshold as warning', function () {
+        expect(Vehicle::inspectionUrgencyColor(Vehicle::INSPECTION_URGENT_DAYS + 1))->toBe('warning');
+    });
+
+    it('marks exactly the warning threshold as warning', function () {
+        expect(Vehicle::inspectionUrgencyColor(Vehicle::INSPECTION_WARNING_DAYS))->toBe('warning');
+    });
+
+    it('marks one day past the warning threshold as success', function () {
+        expect(Vehicle::inspectionUrgencyColor(Vehicle::INSPECTION_WARNING_DAYS + 1))->toBe('success');
+    });
+});
+
 it('relates to employee, fuel card, leasing company and dealership', function () {
     $vehicle = Vehicle::factory()
         ->for(Employee::factory())
@@ -217,4 +284,25 @@ it('exposes vehicles from the master data side', function () {
     Vehicle::factory()->count(2)->for($employee)->create();
 
     expect($employee->vehicles)->toHaveCount(2);
+});
+
+it('orders appointments by date descending so the newest one is on top', function () {
+    $vehicle = Vehicle::factory()->create();
+    $oldest = VehicleAppointment::factory()->for($vehicle)->create(['date' => today()->subYear()]);
+    $newest = VehicleAppointment::factory()->for($vehicle)->create(['date' => today()]);
+    $middle = VehicleAppointment::factory()->for($vehicle)->create(['date' => today()->subMonths(3)]);
+
+    expect($vehicle->appointments->pluck('id')->all())
+        ->toBe([$newest->id, $middle->id, $oldest->id]);
+});
+
+it('deletes a vehicle\'s appointments when the vehicle itself is deleted', function () {
+    // cascadeOnDelete statt restrictOnDelete wie bei den Stammdaten: Termine
+    // gehoeren zum Fahrzeug und haben ohne es keinen Sinn.
+    $vehicle = Vehicle::factory()->create();
+    VehicleAppointment::factory()->for($vehicle)->count(2)->create();
+
+    $vehicle->delete();
+
+    expect(VehicleAppointment::count())->toBe(0);
 });

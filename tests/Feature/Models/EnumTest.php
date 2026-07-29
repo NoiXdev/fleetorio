@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\AppointmentType;
 use App\Enums\FuelCardProvider;
 use App\Enums\FuelType;
 use App\Enums\UserRole;
@@ -32,4 +33,20 @@ it('provides labels for fuel card providers', function () {
 it('provides labels for user roles', function () {
     expect(UserRole::Admin->getLabel())->toBe('Administrator')
         ->and(UserRole::Viewer->getLabel())->toBe('Nur-Lesen');
+});
+
+it('provides German labels for appointment types', function () {
+    expect(AppointmentType::Service->getLabel())->toBe('Service')
+        ->and(AppointmentType::Workshop->getLabel())->toBe('Werkstatt')
+        ->and(AppointmentType::Inspection->getLabel())->toBe('Hauptuntersuchung');
+});
+
+it('gives appointment types colors distinct from danger and primary', function () {
+    // 'danger' ist in diesem Panel auf Rose verschoben, 'primary' ist das
+    // Markenrot (siehe AdminPanelProvider) - beide sind reserviert und
+    // duerfen fuer Termin-Badges nicht wiederverwendet werden.
+    $colors = array_map(fn (AppointmentType $type): string => $type->getColor(), AppointmentType::cases());
+
+    expect(array_intersect($colors, ['danger', 'primary']))->toBeEmpty()
+        ->and(array_unique($colors))->toHaveCount(3);
 });

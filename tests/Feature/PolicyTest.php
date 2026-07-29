@@ -6,6 +6,7 @@ use App\Models\FuelCard;
 use App\Models\LeasingCompany;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Models\VehicleAppointment;
 
 beforeEach(function () {
     $this->admin = User::factory()->admin()->create();
@@ -48,6 +49,22 @@ it('applies the same rule to master data', function (string $model) {
     LeasingCompany::class,
     Dealership::class,
 ]);
+
+it('lets everyone read appointments but only admins write them', function () {
+    // Nicht Teil der generischen Stammdaten-with()-Liste oben, weil
+    // VehicleAppointment::factory() ohne ein zugehoeriges Fahrzeug nicht
+    // erzeugt werden kann (vehicle_id ist Pflicht).
+    $appointment = VehicleAppointment::factory()->for(Vehicle::factory())->create();
+
+    expect($this->viewer->can('viewAny', VehicleAppointment::class))->toBeTrue()
+        ->and($this->viewer->can('view', $appointment))->toBeTrue()
+        ->and($this->viewer->can('create', VehicleAppointment::class))->toBeFalse()
+        ->and($this->viewer->can('update', $appointment))->toBeFalse()
+        ->and($this->viewer->can('delete', $appointment))->toBeFalse()
+        ->and($this->admin->can('create', VehicleAppointment::class))->toBeTrue()
+        ->and($this->admin->can('update', $appointment))->toBeTrue()
+        ->and($this->admin->can('delete', $appointment))->toBeTrue();
+});
 
 it('restricts user administration to admins entirely', function () {
     expect($this->admin->can('viewAny', User::class))->toBeTrue()

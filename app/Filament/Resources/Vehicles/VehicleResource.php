@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Vehicles;
 use App\Filament\Resources\Vehicles\Pages\CreateVehicle;
 use App\Filament\Resources\Vehicles\Pages\EditVehicle;
 use App\Filament\Resources\Vehicles\Pages\ListVehicles;
+use App\Filament\Resources\Vehicles\RelationManagers\VehicleAppointmentsRelationManager;
 use App\Filament\Resources\Vehicles\Schemas\VehicleForm;
 use App\Filament\Resources\Vehicles\Tables\VehiclesTable;
 use App\Models\Vehicle;
@@ -44,7 +45,7 @@ class VehicleResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            VehicleAppointmentsRelationManager::class,
         ];
     }
 

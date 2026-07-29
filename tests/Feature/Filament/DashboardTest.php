@@ -3,9 +3,11 @@
 use App\Enums\FuelType;
 use App\Filament\Widgets\ExpiringLeases;
 use App\Filament\Widgets\FleetOverview;
+use App\Filament\Widgets\UpcomingInspections;
 use App\Models\Employee;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Models\VehicleAppointment;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
 use function Pest\Laravel\actingAs;
@@ -178,11 +180,66 @@ it('shows the driver of an expiring vehicle', function () {
 });
 
 it('shows no money on the dashboard', function () {
-    Vehicle::factory()->create([
+    $vehicle = Vehicle::factory()->create([
         'lease_end' => today()->addDays(20),
         'monthly_lease_rate' => 12345.67,
+        'inspection_valid_until' => today()->addDays(30),
     ]);
+    VehicleAppointment::factory()->for($vehicle)->create(['cost' => 987.65]);
 
     livewire(FleetOverview::class)->assertDontSee('12.345,67');
     livewire(ExpiringLeases::class)->assertDontSee('12.345,67');
+    livewire(UpcomingInspections::class)
+        ->assertDontSee('12.345,67')
+        ->assertDontSee('987,65');
+});
+
+it('lists inspections due inside the warning window', function () {
+    $soon = Vehicle::factory()->create(['inspection_valid_until' => today()->addDays(10)]);
+    $edge = Vehicle::factory()->create(['inspection_valid_until' => today()->addDays(Vehicle::INSPECTION_WARNING_DAYS)]);
+    $later = Vehicle::factory()->create(['inspection_valid_until' => today()->addDays(Vehicle::INSPECTION_WARNING_DAYS + 1)]);
+    $expired = Vehicle::factory()->create(['inspection_valid_until' => today()->subDay()]);
+    $retired = Vehicle::factory()->retired()->create(['inspection_valid_until' => today()->addDays(10)]);
+
+    livewire(UpcomingInspections::class)
+        ->assertOk()
+        ->assertCanSeeTableRecords([$soon, $edge])
+        ->assertCanNotSeeTableRecords([$later, $expired, $retired]);
+});
+
+it('excludes a vehicle without an inspection date from the upcoming inspections widget', function () {
+    $withoutDate = Vehicle::factory()->create(['inspection_valid_until' => null]);
+    $due = Vehicle::factory()->create(['inspection_valid_until' => today()->addDays(10)]);
+
+    livewire(UpcomingInspections::class)
+        ->assertOk()
+        ->assertCanSeeTableRecords([$due])
+        ->assertCanNotSeeTableRecords([$withoutDate]);
+});
+
+it('shows the driver of a vehicle with a due inspection', function () {
+    $employee = Employee::factory()->create(['first_name' => 'Anna', 'last_name' => 'Beispiel']);
+    Vehicle::factory()->for($employee)->create(['inspection_valid_until' => today()->addDays(10)]);
+
+    livewire(UpcomingInspections::class)
+        ->assertSee('Beispiel');
+});
+
+it('mentions the 60 day window in the upcoming inspections heading', function () {
+    livewire(UpcomingInspections::class)
+        ->assertSee('60');
+});
+
+it('orders the dashboard widgets as fleet stats, expiring leases, then upcoming inspections', function () {
+    $sortOf = function (string $widgetClass): ?int {
+        $property = new ReflectionProperty($widgetClass, 'sort');
+        $property->setAccessible(true);
+
+        return $property->getValue();
+    };
+
+    expect($sortOf(FleetOverview::class))
+        ->toBeLessThan($sortOf(ExpiringLeases::class))
+        ->and($sortOf(ExpiringLeases::class))
+        ->toBeLessThan($sortOf(UpcomingInspections::class));
 });
