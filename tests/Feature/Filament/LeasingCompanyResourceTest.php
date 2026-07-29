@@ -53,3 +53,11 @@ it('refuses to delete a company that is still referenced', function () {
 
     assertDatabaseHas(LeasingCompany::class, ['id' => $company->id]);
 });
+
+it('denies a viewer direct http access to the create-leasing-company page', function () {
+    // Nicht nur die Navigation ausgeblendet, sondern auch per direktem Request
+    // gesperrt (siehe LeasingCompanyPolicy::create).
+    actingAs(User::factory()->viewer()->withTwoFactor()->create());
+
+    $this->get('/admin/leasing-companies/create')->assertForbidden();
+});

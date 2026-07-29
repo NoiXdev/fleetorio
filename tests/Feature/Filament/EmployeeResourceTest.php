@@ -73,3 +73,11 @@ it('hides write actions from viewers', function () {
         ->assertOk()
         ->assertActionHidden(\Filament\Actions\CreateAction::class);
 });
+
+it('denies a viewer direct http access to the create-employee page', function () {
+    // Nicht nur die Navigation ausgeblendet, sondern auch per direktem Request
+    // gesperrt (siehe VehiclePolicy-Aequivalent EmployeePolicy::create).
+    actingAs(User::factory()->viewer()->withTwoFactor()->create());
+
+    $this->get('/admin/employees/create')->assertForbidden();
+});

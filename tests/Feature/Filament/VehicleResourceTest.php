@@ -137,7 +137,10 @@ it('rejects a lease end before the lease start', function () {
         ->assertHasFormErrors(['lease_end']);
 });
 
-it('rejects negative amounts', function () {
+it('rejects negative amounts', function (string $field) {
+    // monthly_lease_rate, annual_vehicle_tax und annual_insurance tragen alle
+    // drei minValue(0) (siehe VehicleForm); zuvor war nur das erste Feld
+    // getestet.
     actingAs(User::factory()->admin()->withTwoFactor()->create());
 
     livewire(CreateVehicle::class)
@@ -148,11 +151,11 @@ it('rejects negative amounts', function () {
             'fuel_type' => FuelType::Diesel->value,
             'lease_start' => '2026-01-01',
             'lease_end' => '2029-01-01',
-            'monthly_lease_rate' => -50,
+            $field => -50,
         ])
         ->call('create')
-        ->assertHasFormErrors(['monthly_lease_rate']);
-});
+        ->assertHasFormErrors([$field]);
+})->with(['monthly_lease_rate', 'annual_vehicle_tax', 'annual_insurance']);
 
 describe('cost visibility', function () {
     it('shows cost fields to a user with the permission', function () {
