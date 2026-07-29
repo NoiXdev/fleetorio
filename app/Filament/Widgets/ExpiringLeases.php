@@ -42,18 +42,9 @@ class ExpiringLeases extends TableWidget
                     ->label('Resttage')
                     ->badge()
                     ->state(fn (Vehicle $record): int => (int) today()->diffInDays($record->lease_end, false))
-                    // Gleiche Schwellenlogik wie die Leasingende-Spalte in
-                    // VehiclesTable, damit Farbe = Dringlichkeit überall
-                    // dasselbe bedeutet. gray/success sind hier nicht
-                    // erreichbar (die Abfrage liefert nur 0..LEASE_WARNING_DAYS
-                    // Resttage), aber die Logik bleibt bewusst identisch statt
-                    // eine eigene, engere Variante zu pflegen.
-                    ->color(fn (int $state): string => match (true) {
-                        $state < 0 => 'gray',
-                        $state <= 90 => 'danger',
-                        $state <= Vehicle::LEASE_WARNING_DAYS => 'warning',
-                        default => 'success',
-                    }),
+                    // Schwellenlogik zentral in Vehicle::leaseUrgencyColor(),
+                    // damit Farbe = Dringlichkeit ueberall dasselbe bedeutet.
+                    ->color(fn (int $state): string => Vehicle::leaseUrgencyColor($state)),
             ]);
     }
 }

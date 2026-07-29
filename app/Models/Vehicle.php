@@ -23,6 +23,12 @@ class Vehicle extends Model
      */
     public const LEASE_WARNING_DAYS = 180;
 
+    /**
+     * Vorlaufzeit, ab der ein auslaufender Leasingvertrag als dringend gilt
+     * (danger statt warning). Ebenfalls bewusst eine Konstante.
+     */
+    public const LEASE_URGENT_DAYS = 90;
+
     protected $fillable = [
         'brand',
         'model',
@@ -149,5 +155,28 @@ class Vehicle extends Model
         return static::activeCountsByFuelType()
             ->map(fn (int $total, string $fuelType): string => $total.' '.FuelType::from($fuelType)->getLabel())
             ->implode(' · ');
+    }
+
+    /**
+     * Vierstufige Dringlichkeitsfarbe fuer ein Leasingende, ausgehend von den
+     * verbleibenden Tagen (negativ = bereits vorbei). Zentral hier, weil
+     * dieselbe Skala an drei Stellen gebraucht wird: VehiclesTable (Spalte
+     * Leasingende), ExpiringLeases (Spalte Resttage) und FleetOverview
+     * (Karte "Naechstes Leasingende").
+     *
+     * "gray" ist an manchen dieser Stellen strukturell nicht erreichbar (z.B.
+     * filtert FleetOverview::nextLeaseEndStat() bereits auf lease_end >= heute,
+     * und die Abfrage hinter ExpiringLeases liefert nur 0..LEASE_WARNING_DAYS
+     * Resttage) - die Logik bleibt trotzdem an allen drei Stellen identisch,
+     * statt je eine eigene, engere Variante zu pflegen.
+     */
+    public static function leaseUrgencyColor(int $daysLeft): string
+    {
+        return match (true) {
+            $daysLeft < 0 => 'gray',
+            $daysLeft <= self::LEASE_URGENT_DAYS => 'danger',
+            $daysLeft <= self::LEASE_WARNING_DAYS => 'warning',
+            default => 'success',
+        };
     }
 }

@@ -41,16 +41,9 @@ class VehiclesTable
                     ->label('Leasingende')
                     ->date('d.m.Y')
                     ->badge()
-                    ->color(function (Vehicle $record): string {
-                        $days = today()->diffInDays($record->lease_end, false);
-
-                        return match (true) {
-                            $days < 0 => 'gray',
-                            $days <= 90 => 'danger',
-                            $days <= Vehicle::LEASE_WARNING_DAYS => 'warning',
-                            default => 'success',
-                        };
-                    })
+                    ->color(fn (Vehicle $record): string => Vehicle::leaseUrgencyColor(
+                        (int) today()->diffInDays($record->lease_end, false)
+                    ))
                     ->sortable(),
                 TextColumn::make('status')
                     ->label('Status')

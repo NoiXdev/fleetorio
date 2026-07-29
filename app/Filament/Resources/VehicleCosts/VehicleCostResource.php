@@ -43,7 +43,7 @@ class VehicleCostResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->user()?->can('viewCosts') ?? false;
+        return auth()->user()?->canViewCosts() ?? false;
     }
 
     public static function canCreate(): bool

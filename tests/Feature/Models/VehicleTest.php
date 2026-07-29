@@ -93,6 +93,28 @@ it('uses a 180 day warning window', function () {
     expect(Vehicle::LEASE_WARNING_DAYS)->toBe(180);
 });
 
+describe('lease urgency color', function () {
+    it('marks an already expired lease as gray', function () {
+        expect(Vehicle::leaseUrgencyColor(-1))->toBe('gray');
+    });
+
+    it('marks exactly the urgent threshold as danger', function () {
+        expect(Vehicle::leaseUrgencyColor(Vehicle::LEASE_URGENT_DAYS))->toBe('danger');
+    });
+
+    it('marks one day past the urgent threshold as warning', function () {
+        expect(Vehicle::leaseUrgencyColor(Vehicle::LEASE_URGENT_DAYS + 1))->toBe('warning');
+    });
+
+    it('marks exactly the warning threshold as warning', function () {
+        expect(Vehicle::leaseUrgencyColor(Vehicle::LEASE_WARNING_DAYS))->toBe('warning');
+    });
+
+    it('marks one day past the warning threshold as success', function () {
+        expect(Vehicle::leaseUrgencyColor(Vehicle::LEASE_WARNING_DAYS + 1))->toBe('success');
+    });
+});
+
 it('relates to employee, fuel card and leasing company', function () {
     $vehicle = Vehicle::factory()
         ->for(Employee::factory())

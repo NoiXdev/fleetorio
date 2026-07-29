@@ -58,6 +58,20 @@ it('filters by provider', function () {
         ->assertCanNotSeeTableRecords([$elli]);
 });
 
+it('does not show the full card number in the list, only provider and last four digits', function () {
+    // Die Nummer ist verschluesselt und im Model als $hidden gefuehrt; die
+    // Liste soll sie nicht im Klartext ausbreiten (siehe FuelCard::maskedNumber()).
+    $card = FuelCard::factory()->create([
+        'provider' => FuelCardProvider::Dkv,
+        'card_number' => '7080999886789',
+    ]);
+
+    livewire(ListFuelCards::class)
+        ->assertOk()
+        ->assertSee('DKV ····6789')
+        ->assertDontSee('7080999886789');
+});
+
 it('refuses to delete a card that is still assigned', function () {
     $card = FuelCard::factory()->create();
     Vehicle::factory()->for($card)->create(['license_plate' => 'M-CD 5678']);
@@ -67,4 +81,12 @@ it('refuses to delete a card that is still assigned', function () {
         ->assertNotified();
 
     assertDatabaseHas(FuelCard::class, ['id' => $card->id]);
+});
+
+it('denies a viewer direct http access to the create-fuel-card page', function () {
+    // Nicht nur die Navigation ausgeblendet, sondern auch per direktem Request
+    // gesperrt (siehe FuelCardPolicy::create).
+    actingAs(User::factory()->viewer()->withTwoFactor()->create());
+
+    $this->get('/admin/fuel-cards/create')->assertForbidden();
 });

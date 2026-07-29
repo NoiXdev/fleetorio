@@ -62,6 +62,17 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
     }
 
     /**
+     * Abkuerzung fuer den Aufruf des viewCosts-Gates, kein Ersatz dafuer: das
+     * Gate (siehe AppServiceProvider::boot()) bleibt die Autorisierungsgrenze.
+     * Zentralisiert nur den wiederholten Aufruf can('viewCosts'), der zuvor an
+     * fuenf Stellen wortgleich stand.
+     */
+    public function canViewCosts(): bool
+    {
+        return $this->can('viewCosts');
+    }
+
+    /**
      * Wer sich am Panel anmelden darf. Ohne dieses Interface sperrt Filament
      * den Zugang in allen Umgebungen außer local.
      */

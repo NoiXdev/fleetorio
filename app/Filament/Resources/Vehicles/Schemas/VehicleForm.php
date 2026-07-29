@@ -57,7 +57,12 @@ class VehicleForm
                             ->preload(),
                         Select::make('fuel_card_id')
                             ->label('Tankkarte')
+                            // Die Kartennummer ist verschluesselt und im Model
+                            // als $hidden gefuehrt; die Auswahl zeigt daher nur
+                            // Anbieter plus die letzten vier Stellen, nicht die
+                            // volle Nummer im Klartext.
                             ->relationship('fuelCard', 'card_number')
+                            ->getOptionLabelFromRecordUsing(fn ($record): string => $record->maskedNumber())
                             ->preload(),
                     ]),
 
@@ -95,7 +100,7 @@ class VehicleForm
                     // ausgewertet wird. Siehe vendor/filament/schemas/src/
                     // Components/Concerns/HasState.php, dehydrateState()
                     // (Zeilen 316-356) und isHiddenAndNotDehydratedWhenHidden().
-                    ->visible(fn (): bool => auth()->user()?->can('viewCosts') ?? false)
+                    ->visible(fn (): bool => auth()->user()?->canViewCosts() ?? false)
                     ->schema([
                         TextInput::make('monthly_lease_rate')
                             ->label('Leasingrate (monatlich)')
@@ -107,19 +112,19 @@ class VehicleForm
                             // feldweise versteckt wird. Der eigentliche Schutz
                             // (siehe Kommentar an der Section oben) wirkt bereits
                             // vorher.
-                            ->dehydrated(fn (): bool => auth()->user()?->can('viewCosts') ?? false),
+                            ->dehydrated(fn (): bool => auth()->user()?->canViewCosts() ?? false),
                         TextInput::make('annual_vehicle_tax')
                             ->label('Kfz-Steuer (jährlich)')
                             ->numeric()
                             ->minValue(0)
                             ->prefix('€')
-                            ->dehydrated(fn (): bool => auth()->user()?->can('viewCosts') ?? false),
+                            ->dehydrated(fn (): bool => auth()->user()?->canViewCosts() ?? false),
                         TextInput::make('annual_insurance')
                             ->label('Versicherung (jährlich)')
                             ->numeric()
                             ->minValue(0)
                             ->prefix('€')
-                            ->dehydrated(fn (): bool => auth()->user()?->can('viewCosts') ?? false),
+                            ->dehydrated(fn (): bool => auth()->user()?->canViewCosts() ?? false),
                     ]),
 
                 Section::make('Notizen')

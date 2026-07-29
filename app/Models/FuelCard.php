@@ -35,4 +35,15 @@ class FuelCard extends Model
     {
         return $this->hasMany(Vehicle::class);
     }
+
+    /**
+     * Sparsame Darstellung fuer Auswahlfelder und Listen, die die Karte nur
+     * benennen, nicht bearbeiten muessen (Fahrzeugformular, Tankkartenliste):
+     * Anbieter plus die letzten vier Stellen, z.B. "DKV ····6789". Die volle
+     * Nummer bleibt dem Bearbeitungsformular der Tankkarte vorbehalten.
+     */
+    public function maskedNumber(): string
+    {
+        return $this->provider->getLabel().' ····'.substr($this->card_number, -4);
+    }
 }
