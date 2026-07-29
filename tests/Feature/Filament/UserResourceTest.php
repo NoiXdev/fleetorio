@@ -62,6 +62,21 @@ it('requires a password when creating', function () {
         ->assertHasFormErrors(['password' => 'required']);
 });
 
+it('rejects a password shorter than the minimum length', function () {
+    actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+    livewire(CreateUser::class)
+        ->fillForm([
+            'name' => 'Zu Kurz',
+            'email' => 'zukurz@example.com',
+            'password' => 'kurz1234567',
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['password' => 'min']);
+
+    expect(User::where('email', 'zukurz@example.com')->exists())->toBeFalse();
+});
+
 it('keeps the password when editing without entering a new one', function () {
     $admin = User::factory()->admin()->withTwoFactor()->create();
     actingAs($admin);

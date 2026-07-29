@@ -6,7 +6,7 @@ use Filament\Auth\Pages\Login;
 use function Pest\Livewire\livewire;
 
 it('throttles repeated failed login attempts', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->withTwoFactor()->create();
 
     // Die ersten fuenf Versuche scheitern an falschen Zugangsdaten.
     foreach (range(1, 5) as $attempt) {
