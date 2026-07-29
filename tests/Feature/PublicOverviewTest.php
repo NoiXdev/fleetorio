@@ -36,6 +36,16 @@ it('shows a prominent login link to the admin panel', function () {
         ->assertSee('/admin/login', escape: false);
 });
 
+it('shows the company logo and uses it as favicon', function () {
+    // Das Logo liegt lokal unter public/images - kein Verweis auf www.3b.de,
+    // damit die Seite ohne Verbindung nach draussen vollstaendig laedt.
+    $this->get('/')
+        ->assertOk()
+        ->assertSee('images/a3b-logo.svg', escape: false)
+        ->assertSee('rel="icon"', escape: false)
+        ->assertDontSee('www.3b.de');
+});
+
 it('never leaks license plates or employee names to the public overview page', function () {
     $employee = Employee::factory()->create([
         'first_name' => 'Geheim',

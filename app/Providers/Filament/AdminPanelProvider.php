@@ -26,7 +26,13 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->brandName('Fuhrparkmanagement')
+            ->brandName('3B Fuhrparkmanagement')
+            ->brandLogo(asset('images/a3b-logo.svg'))
+            ->brandLogoHeight('2rem')
+            ->favicon(asset('images/a3b-logo.png'))
+            // Primärfarbe bewusst nicht auf das Markenrot gesetzt: Filament
+            // nutzt Rot für Fehler, Löschbestätigungen und Warnungen. Ein rotes
+            // Panel würde genau die Meldungen verschlucken, die auffallen sollen.
             ->colors([
                 'primary' => Color::Blue,
             ])
@@ -35,7 +41,7 @@ class AdminPanelProvider extends PanelProvider
             ->multiFactorAuthentication([
                 AppAuthentication::make()
                     ->recoverable()
-                    ->brandName('Fuhrparkmanagement'),
+                    ->brandName('3B Fuhrparkmanagement'),
             ], isRequired: false)
             ->navigationGroups([
                 'Fuhrpark',

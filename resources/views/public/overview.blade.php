@@ -6,6 +6,10 @@
     <meta name="robots" content="noindex, nofollow">
     <title>3B Fuhrparkmanagement</title>
 
+    <link rel="icon" type="image/svg+xml" href="{{ asset('images/a3b-logo.svg') }}">
+    <link rel="icon" type="image/png" href="{{ asset('images/a3b-logo.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/a3b-logo.png') }}">
+
     {{-- Inter liegt lokal in den Filament-Assets. Bewusst keine externe Schriftquelle:
          die Seite soll ohne Verbindung nach draußen laden. Die Hausschrift Klint ist
          kommerziell lizenziert und steht hier nicht zur Verfügung. --}}
@@ -28,9 +32,12 @@
 
         @media (prefers-color-scheme: dark) {
             :root {
-                /* Reines #bb0000 hat auf dunklem Grund zu wenig Kontrast. */
-                --brand: #ff3131;
-                --brand-hover: #ff5c5c;
+                /* Markenrot bleibt auch im Dunkelmodus #bb0000 (Vorgabe des
+                   Corporate Designs). Es erscheint nur an großflächigen
+                   Elementen - Zahl in 3rem aufwärts und Schaltfläche mit
+                   weißer Schrift -, wo der Kontrast dafür ausreicht. */
+                --brand: #bb0000;
+                --brand-hover: #d40000;
                 --ink: #f4f4f5;
                 --ink-soft: #a1a1a6;
                 --surface: #161618;
@@ -69,16 +76,9 @@
         }
 
         .mark {
-            display: grid;
-            place-items: center;
-            width: 2.5rem;
-            height: 2.5rem;
-            background: var(--brand);
-            color: #fff;
-            font-size: 1.0625rem;
-            font-weight: 700;
-            letter-spacing: -0.02em;
-            border-radius: 0.5rem;
+            display: block;
+            width: auto;
+            height: 2.75rem;
         }
 
         .wordmark {
@@ -235,7 +235,7 @@
 <body>
     <div class="shell">
         <header class="masthead">
-            <span class="mark" aria-hidden="true">3B</span>
+            <img class="mark" src="{{ asset('images/a3b-logo.svg') }}" alt="Agentur3B" width="56" height="60">
             <span class="wordmark">3B <span>Fuhrparkmanagement</span></span>
         </header>
 
