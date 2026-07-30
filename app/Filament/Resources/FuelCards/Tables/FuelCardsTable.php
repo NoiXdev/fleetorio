@@ -5,6 +5,7 @@ namespace App\Filament\Resources\FuelCards\Tables;
 use App\Enums\FuelCardProvider;
 use App\Filament\Actions\GuardedDeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -40,6 +41,7 @@ class FuelCardsTable
                     ->options(FuelCardProvider::class),
             ])
             ->recordActions([
+                ViewAction::make(),
                 EditAction::make(),
                 GuardedDeleteAction::make(),
             ]);

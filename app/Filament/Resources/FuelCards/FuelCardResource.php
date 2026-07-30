@@ -5,7 +5,9 @@ namespace App\Filament\Resources\FuelCards;
 use App\Filament\Resources\FuelCards\Pages\CreateFuelCard;
 use App\Filament\Resources\FuelCards\Pages\EditFuelCard;
 use App\Filament\Resources\FuelCards\Pages\ListFuelCards;
+use App\Filament\Resources\FuelCards\Pages\ViewFuelCard;
 use App\Filament\Resources\FuelCards\Schemas\FuelCardForm;
+use App\Filament\Resources\FuelCards\Schemas\FuelCardInfolist;
 use App\Filament\Resources\FuelCards\Tables\FuelCardsTable;
 use App\Models\FuelCard;
 use BackedEnum;
@@ -32,6 +34,11 @@ class FuelCardResource extends Resource
         return FuelCardForm::configure($schema);
     }
 
+    public static function infolist(Schema $schema): Schema
+    {
+        return FuelCardInfolist::configure($schema);
+    }
+
     public static function table(Table $table): Table
     {
         return FuelCardsTable::configure($table);
@@ -49,6 +56,7 @@ class FuelCardResource extends Resource
         return [
             'index' => ListFuelCards::route('/'),
             'create' => CreateFuelCard::route('/create'),
+            'view' => ViewFuelCard::route('/{record}'),
             'edit' => EditFuelCard::route('/{record}/edit'),
         ];
     }
