@@ -15,7 +15,6 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -33,19 +32,18 @@ class VehicleForm
      */
     private const ACCEPTED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
-    private const MAX_IMAGE_SIZE_KB = 5 * 1024;
+    private const MAX_IMAGE_SIZE_KB = 10 * 1024;
 
     public static function configure(Schema $schema): Schema
     {
         return $schema
             ->components([
-                // Begrenzt die Gesamtbreite auf einem breiten Monitor, damit
-                // die Seite nicht auseinanderfaellt; auf einem schmalen
-                // Bildschirm (Tablet) bleibt sie unterhalb dieser Grenze
-                // ohnehin voll nutzbar. Siehe Filament\Schemas\Components\
-                // Concerns\HasMaxWidth, auf jeder Komponente verfuegbar.
+                // Volle Breite (Wunsch des Auftraggebers). columnSpanFull() ist
+                // dabei entscheidend: ohne den Aufruf belegt das Grid nur eine
+                // Spalte des uebergeordneten Layouts und die Abschnitte enden
+                // bei etwa der halben Fensterbreite.
                 Grid::make(1)
-                    ->maxWidth(Width::SixExtraLarge)
+                    ->columnSpanFull()
                     ->schema([
                         static::vehicleSection(),
 
@@ -180,7 +178,9 @@ class VehicleForm
                         // VehicleDocumentsRelationManager.
                         ->validationMessages([
                             'mimetypes' => 'Es sind nur JPG-, PNG- und WebP-Dateien erlaubt.',
-                            'max' => 'Das Bild darf höchstens 5 MB groß sein.',
+                            // Zahl aus der Konstante, siehe Kommentar im
+                            // VehicleDocumentsRelationManager.
+                            'max' => 'Das Bild darf höchstens '.(self::MAX_IMAGE_SIZE_KB / 1024).' MB groß sein.',
                         ])
                         ->imagePreviewHeight('160')
                         // Ohne diese Ueberschreibung wuerde die Vorschau eines

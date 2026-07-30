@@ -74,6 +74,9 @@ RUN install-php-extensions intl pdo_mysql
 # backstop underneath it.
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 COPY docker/opcache-prod.ini "$PHP_INI_DIR/conf.d/zz-opcache-prod.ini"
+# Upload limits: php.ini-production caps uploads at 2M, well below what the
+# application allows for vehicle documents (25M) and images (10M).
+COPY docker/uploads-prod.ini "$PHP_INI_DIR/conf.d/zz-uploads-prod.ini"
 
 WORKDIR /app
 

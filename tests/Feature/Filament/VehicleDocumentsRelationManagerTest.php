@@ -128,7 +128,7 @@ describe('upload restrictions with german error messages', function () {
 
         $vehicle = Vehicle::factory()->create();
 
-        $file = UploadedFile::fake()->create('gross.pdf', 11 * 1024, 'application/pdf');
+        $file = UploadedFile::fake()->create('gross.pdf', 26 * 1024, 'application/pdf');
 
         $component = livewire(VehicleDocumentsRelationManager::class, [
             'ownerRecord' => $vehicle,
@@ -141,7 +141,7 @@ describe('upload restrictions with german error messages', function () {
             ]);
 
         expect($component->instance()->getErrorBag()->first('mountedActions.0.data.file_path'))
-            ->toBe('Die Datei darf höchstens 10 MB groß sein.');
+            ->toBe('Die Datei darf höchstens 25 MB groß sein.');
 
         assertDatabaseMissing(VehicleDocument::class, ['vehicle_id' => $vehicle->id]);
     });

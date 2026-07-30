@@ -10,7 +10,6 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use Filament\Support\Enums\Width;
 
 /**
  * Spiegelt die Gliederung von VehicleForm (dieselben fuenf Abschnitte in
@@ -28,11 +27,12 @@ class VehicleInfolist
     {
         return $schema
             ->components([
-                // Dieselbe Breitenbegrenzung wie im Formular (siehe
-                // VehicleForm), damit beide Seiten auf einem breiten Monitor
-                // identisch wirken.
+                // Volle Breite (Wunsch des Auftraggebers). columnSpanFull() ist
+                // dabei entscheidend: ohne den Aufruf belegt das Grid nur eine
+                // Spalte des uebergeordneten Layouts und die Abschnitte enden
+                // bei etwa der halben Fensterbreite.
                 Grid::make(1)
-                    ->maxWidth(Width::SixExtraLarge)
+                    ->columnSpanFull()
                     ->schema([
                         static::vehicleSection(),
 

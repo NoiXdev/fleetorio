@@ -53,6 +53,14 @@ Feldnamen ab.
   Wer Route oder Controller ändert, muss diese Prüfung für GET und POST einzeln erhalten
   (inklusive der `lockForUpdate()`-Transaktion gegen das Wettrennen zweier gleichzeitiger
   Anfragen) und darf sie nicht versehentlich auf eine einzige Stelle zusammenziehen.
+- **Upload-Grenzen liegen auf drei Ebenen und müssen zusammenpassen.** Greift die äußerste,
+  scheitert der Upload mit einer Meldung, aus der die Ursache nicht hervorgeht („Feld ist
+  erforderlich" statt einer Aussage zur Größe):
+  1. PHP — `docker/uploads-prod.ini` (im Image; php.ini-production erlaubt sonst nur 2 MB)
+  2. Livewire — `config/livewire.php`, `temporary_file_upload.rules` (Standard sind 12 MB)
+  3. Filament — `maxSize()` am Feld, aus `MAX_FILE_SIZE_KB` bzw. `MAX_IMAGE_SIZE_KB`
+  Aktuell: Dokumente 25 MB, Bilder 10 MB, darüber 30 MB Puffer bei Livewire und PHP. Die
+  Fehlermeldungen leiten die Zahl aus der Konstante ab — nicht wieder hineinschreiben.
 - **Fahrzeugdokumente** (Fahrzeugschein u. a., `VehicleDocument`) liegen auf dem privaten Disk
   (`storage/app/private`) und dürfen ausschließlich über den autorisierten
   `VehicleDocumentDownloadController` ausgeliefert werden — kein `Storage::url()`, kein

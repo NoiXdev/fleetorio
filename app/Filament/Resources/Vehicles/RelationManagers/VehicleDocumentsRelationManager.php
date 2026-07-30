@@ -64,7 +64,7 @@ class VehicleDocumentsRelationManager extends RelationManager
      */
     private const ACCEPTED_MIME_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
 
-    private const MAX_FILE_SIZE_KB = 10 * 1024;
+    private const MAX_FILE_SIZE_KB = 25 * 1024;
 
     public function form(Schema $schema): Schema
     {
@@ -85,7 +85,10 @@ class VehicleDocumentsRelationManager extends RelationManager
                     // der Oberflaeche deutsch ist.
                     ->validationMessages([
                         'mimetypes' => 'Es sind nur PDF-, JPG- und PNG-Dateien erlaubt.',
-                        'max' => 'Die Datei darf höchstens 10 MB groß sein.',
+                        // Zahl aus der Konstante ableiten, nicht in den Text
+                        // schreiben: sonst nennt die Meldung nach einer
+                        // Aenderung der Grenze stillschweigend den falschen Wert.
+                        'max' => 'Die Datei darf höchstens '.(self::MAX_FILE_SIZE_KB / 1024).' MB groß sein.',
                     ])
                     // Nur beim Anlegen sichtbar/erforderlich: ein Austausch
                     // der Datei auf einem bestehenden Dokument ist nicht
