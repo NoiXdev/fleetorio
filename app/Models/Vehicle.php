@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class Vehicle extends Model
 {
@@ -49,6 +50,7 @@ class Vehicle extends Model
         'brand',
         'model',
         'license_plate',
+        'image_path',
         'fuel_type',
         'employee_id',
         'fuel_card_id',
@@ -126,9 +128,30 @@ class Vehicle extends Model
         // VehicleDocument::deleting() (Loeschen der Datei) nicht aus. Deshalb
         // hier explizit ueber Eloquent loeschen, damit die Dateien auf dem
         // privaten Disk mitgehen und nicht als verwaiste, personenbezogene
-        // Daten liegen bleiben.
+        // Daten liegen bleiben. Das Fahrzeugbild liegt (anders als die
+        // Dokumente) direkt am Fahrzeug selbst, deshalb hier mit entfernt.
         static::deleting(function (Vehicle $vehicle): void {
             $vehicle->documents->each->delete();
+
+            if (filled($vehicle->image_path)) {
+                Storage::disk('local')->delete($vehicle->image_path);
+            }
+        });
+
+        // Beim Ersetzen (oder Entfernen) des Bildes ueber das Formular soll
+        // die alte Datei nicht als verwaistes, personenbezogenes Datum
+        // (Kennzeichen) auf dem privaten Disk liegen bleiben - siehe
+        // getOriginal() gegen den bereits neuen, im Modell gesetzten Wert.
+        static::updating(function (Vehicle $vehicle): void {
+            if (! $vehicle->isDirty('image_path')) {
+                return;
+            }
+
+            $originalImagePath = $vehicle->getOriginal('image_path');
+
+            if (filled($originalImagePath) && $originalImagePath !== $vehicle->image_path) {
+                Storage::disk('local')->delete($originalImagePath);
+            }
         });
     }
 

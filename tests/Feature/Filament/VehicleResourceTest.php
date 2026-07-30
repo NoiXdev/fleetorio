@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\Vehicle;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
+use Illuminate\Support\Facades\Storage;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
@@ -30,6 +31,41 @@ it('shows the vehicle list without crashing when a vehicle has no lease end', fu
         ->assertOk()
         ->assertCanSeeTableRecords([$vehicle])
         ->assertSee('—');
+});
+
+describe('the image column', function () {
+    it('renders the list without crashing when a vehicle has no image', function () {
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        $vehicle = Vehicle::factory()->create(['image_path' => null]);
+
+        livewire(ListVehicles::class)
+            ->assertOk()
+            ->assertCanSeeTableRecords([$vehicle]);
+    });
+
+    it('renders the list without crashing when a vehicle has an image', function () {
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        $vehicle = Vehicle::factory()->withImage()->create();
+
+        livewire(ListVehicles::class)
+            ->assertOk()
+            ->assertCanSeeTableRecords([$vehicle]);
+    });
+
+    it('points the image column at the authorized image controller, not the storage disk directly', function () {
+        // Belegt den in der Spezifikation geforderten Mechanismus: ImageColumn
+        // erhaelt ueber ->state() die URL des autorisierten Controllers statt
+        // des rohen Pfads, siehe VehiclesTable.
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        $vehicle = Vehicle::factory()->withImage()->create();
+
+        livewire(ListVehicles::class)
+            ->assertOk()
+            ->assertSee(route('vehicle-images.show', $vehicle), escape: false);
+    });
 });
 
 it('lists active vehicles by default and hides retired ones', function () {
@@ -209,6 +245,66 @@ it('renders lease start and end as native date inputs so they can be typed', fun
     expect($html)->toContain('id="form.lease_start"')
         ->toContain('id="form.lease_end"')
         ->not->toContain('fi-fo-date-time-picker-display-text-input');
+});
+
+describe('the image field', function () {
+    it('previews an already stored image via the authorized controller url, not a broken storage link', function () {
+        // Ohne die eigene getUploadedFileUsing()-Ueberschreibung wuerde
+        // Filaments Standardverhalten fuer den privaten 'local'-Disk zuerst
+        // Storage::temporaryUrl() versuchen (der 'local'-Treiber unterstuetzt
+        // das nicht) und danach auf Storage::url() zurueckfallen, was ohne
+        // symbolischen Link auf ein nicht erreichbares /storage/... zeigt -
+        // siehe Kommentar in VehicleForm.
+        //
+        // Die eigentliche Vorschau-URL wird erst per asynchronem Livewire-
+        // Aufruf aus dem Javascript des FileUpload-Feldes nachgeladen (siehe
+        // vendor/filament/forms/src/Components/FileUpload.php,
+        // "getUploadedFilesUsing"), steht also nicht in der initialen HTML-
+        // Auslieferung - deshalb wird hier direkt die PHP-Methode dahinter
+        // (getUploadedFiles()) am gemounteten Formularfeld geprueft, statt im
+        // gerenderten HTML zu suchen.
+        Storage::fake('local');
+
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        $vehicle = Vehicle::factory()->withImage()->create();
+        Storage::disk('local')->put($vehicle->image_path, 'dummy image content');
+
+        $component = livewire(EditVehicle::class, ['record' => $vehicle->id]);
+
+        $field = $component->instance()->getSchema('form')->getComponent('image_path');
+
+        $uploadedFiles = $field->getUploadedFiles();
+
+        expect($uploadedFiles)->toHaveCount(1);
+
+        $preview = array_values($uploadedFiles)[0];
+
+        expect($preview['url'])->toBe(route('vehicle-images.show', $vehicle));
+    });
+});
+
+it('renders the edit page without crashing when every optional field is empty', function () {
+    // Spiegelbild des gleichnamigen Tests fuer die Anzeigeseite
+    // (VehicleViewPageTest): kein Bild, keine Zuordnungen, keine
+    // Leasingdaten, keine HU, keine Kosten, keine Notiz.
+    actingAs(User::factory()->admin()->withCostAccess()->withTwoFactor()->create());
+
+    $vehicle = Vehicle::factory()->withoutLeaseDates()->create([
+        'image_path' => null,
+        'employee_id' => null,
+        'fuel_card_id' => null,
+        'leasing_company_id' => null,
+        'dealership_id' => null,
+        'inspection_valid_until' => null,
+        'monthly_lease_rate' => null,
+        'annual_vehicle_tax' => null,
+        'annual_insurance' => null,
+        'notes' => null,
+    ]);
+
+    livewire(EditVehicle::class, ['record' => $vehicle->id])
+        ->assertOk();
 });
 
 it('rejects a lease end before the lease start', function () {

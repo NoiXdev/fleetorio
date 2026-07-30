@@ -50,6 +50,7 @@ it('renders the view page without crashing when every optional field is empty', 
     actingAs(User::factory()->admin()->withCostAccess()->withTwoFactor()->create());
 
     $vehicle = Vehicle::factory()->withoutLeaseDates()->create([
+        'image_path' => null,
         'employee_id' => null,
         'fuel_card_id' => null,
         'leasing_company_id' => null,

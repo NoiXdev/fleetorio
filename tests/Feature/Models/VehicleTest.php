@@ -309,6 +309,73 @@ it('deletes a vehicle\'s appointments when the vehicle itself is deleted', funct
     expect(VehicleAppointment::count())->toBe(0);
 });
 
+describe('vehicle image', function () {
+    it('deletes the image file when the vehicle itself is deleted', function () {
+        Storage::fake('local');
+
+        $vehicle = Vehicle::factory()->withImage()->create();
+        Storage::disk('local')->put($vehicle->image_path, 'dummy image content');
+
+        $path = $vehicle->image_path;
+
+        $vehicle->delete();
+
+        expect(Storage::disk('local')->exists($path))->toBeFalse();
+    });
+
+    it('does nothing on delete when no image was ever set', function () {
+        Storage::fake('local');
+
+        $vehicle = Vehicle::factory()->create(['image_path' => null]);
+
+        // Darf nicht crashen (kein delete() auf einen null-Pfad).
+        $vehicle->delete();
+
+        expect(Vehicle::count())->toBe(0);
+    });
+
+    it('deletes the old file when the image is replaced', function () {
+        Storage::fake('local');
+
+        $vehicle = Vehicle::factory()->withImage()->create();
+        $oldPath = $vehicle->image_path;
+        Storage::disk('local')->put($oldPath, 'old image content');
+
+        $newPath = 'vehicle-images/new-image.jpg';
+        Storage::disk('local')->put($newPath, 'new image content');
+
+        $vehicle->update(['image_path' => $newPath]);
+
+        expect(Storage::disk('local')->exists($oldPath))->toBeFalse()
+            ->and(Storage::disk('local')->exists($newPath))->toBeTrue()
+            ->and($vehicle->fresh()->image_path)->toBe($newPath);
+    });
+
+    it('deletes the old file when the image is removed entirely', function () {
+        Storage::fake('local');
+
+        $vehicle = Vehicle::factory()->withImage()->create();
+        $oldPath = $vehicle->image_path;
+        Storage::disk('local')->put($oldPath, 'old image content');
+
+        $vehicle->update(['image_path' => null]);
+
+        expect(Storage::disk('local')->exists($oldPath))->toBeFalse()
+            ->and($vehicle->fresh()->image_path)->toBeNull();
+    });
+
+    it('does not touch the file when saving without changing the image', function () {
+        Storage::fake('local');
+
+        $vehicle = Vehicle::factory()->withImage()->create();
+        Storage::disk('local')->put($vehicle->image_path, 'image content');
+
+        $vehicle->update(['brand' => 'Audi']);
+
+        expect(Storage::disk('local')->exists($vehicle->image_path))->toBeTrue();
+    });
+});
+
 it('deletes a vehicle\'s documents and their files when the vehicle itself is deleted', function () {
     // Anders als bei Terminen reicht die Datenbank-Kaskade (cascadeOnDelete
     // auf der Migration) hier nicht: sie raeumt nur die Zeilen ab, nicht die

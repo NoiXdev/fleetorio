@@ -49,4 +49,16 @@ class VehicleFactory extends Factory
             'lease_end' => null,
         ]);
     }
+
+    /**
+     * Fahrzeug mit hinterlegtem Bildpfad. Legt keine tatsaechliche Datei an -
+     * Tests, die die Datei selbst brauchen, tun das ueber Storage::fake('local')
+     * und Storage::disk('local')->put() gegen genau diesen Pfad.
+     */
+    public function withImage(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'image_path' => 'vehicle-images/'.fake()->uuid().'.jpg',
+        ]);
+    }
 }

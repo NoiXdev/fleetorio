@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Vehicles\Schemas;
 
 use App\Models\Vehicle;
+use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -25,6 +26,28 @@ class VehicleInfolist
                 Section::make('Fahrzeug')
                     ->columns(2)
                     ->schema([
+                        ImageEntry::make('image_path')
+                            ->label('Fahrzeugbild')
+                            ->hiddenLabel()
+                            // ImageEntry::getImageUrl() prueft zuerst per
+                            // filter_var(..., FILTER_VALIDATE_URL), ob der Zustand
+                            // bereits eine vollstaendige URL ist, und liefert sie
+                            // in diesem Fall direkt zurueck - ohne den
+                            // konfigurierten Disk ueberhaupt anzufassen (siehe
+                            // vendor/filament/infolists/src/Components/
+                            // ImageEntry.php, getImageUrl()). Genau das nutzt
+                            // ->state() hier aus: statt des rohen Pfads liefert es
+                            // die URL des autorisierten Controllers, sodass
+                            // Storage::url()/temporaryUrl() (fuer den privaten
+                            // 'local'-Disk ohnehin ungeeignet, siehe Spezifikation)
+                            // gar nicht erst zum Zug kommen.
+                            ->state(fn (Vehicle $record): ?string => filled($record->image_path)
+                                ? route('vehicle-images.show', $record)
+                                : null)
+                            ->square()
+                            ->imageHeight('8rem')
+                            ->placeholder('Kein Bild hinterlegt')
+                            ->columnSpanFull(),
                         TextEntry::make('brand')
                             ->label('Marke'),
                         TextEntry::make('model')

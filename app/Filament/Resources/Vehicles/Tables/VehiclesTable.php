@@ -9,6 +9,7 @@ use App\Models\Vehicle;
 use Filament\Actions\EditAction;
 use Filament\Actions\ExportAction;
 use Filament\Actions\ViewAction;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -19,6 +20,22 @@ class VehiclesTable
     {
         return $table
             ->columns([
+                ImageColumn::make('image_path')
+                    ->label('Bild')
+                    // ImageColumn::getImageUrl() liefert einen bereits als URL
+                    // erkannten Zustand direkt zurueck (filter_var(...,
+                    // FILTER_VALIDATE_URL), siehe vendor/filament/tables/src/
+                    // Columns/ImageColumn.php) - ohne den konfigurierten Disk
+                    // ueberhaupt anzufassen. Genau das nutzt ->state() hier
+                    // aus, wie bei ImageEntry in VehicleInfolist: statt des
+                    // rohen Pfads liefert es die URL des autorisierten
+                    // Controllers.
+                    ->state(fn (Vehicle $record): ?string => filled($record->image_path)
+                        ? route('vehicle-images.show', $record)
+                        : null)
+                    ->square()
+                    ->imageSize(40)
+                    ->placeholder('—'),
                 TextColumn::make('license_plate')
                     ->label('Kennzeichen')
                     ->searchable()

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\SetupController;
 use App\Http\Controllers\VehicleDocumentDownloadController;
+use App\Http\Controllers\VehicleImageController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
@@ -48,3 +49,13 @@ Route::redirect('/login', '/admin/login')->name('login');
 Route::get('/vehicle-documents/{vehicleDocument}/download', VehicleDocumentDownloadController::class)
     ->middleware('auth')
     ->name('vehicle-documents.download');
+
+/*
+ * Einziger Weg, ein Fahrzeugbild auszuliefern - siehe Kommentar am
+ * Controller. Dieselbe Absicherung wie bei den Fahrzeugdokumenten oben:
+ * 'auth'-Middleware weist einen nicht angemeldeten Aufruf ab, bevor der
+ * Controller ueberhaupt laeuft.
+ */
+Route::get('/vehicle-images/{vehicle}/show', VehicleImageController::class)
+    ->middleware('auth')
+    ->name('vehicle-images.show');
