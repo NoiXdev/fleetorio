@@ -15,6 +15,8 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Database\Eloquent\Model;
 use UnitEnum;
 
 class EmployeeResource extends Resource
@@ -44,6 +46,29 @@ class EmployeeResource extends Resource
     public static function table(Table $table): Table
     {
         return EmployeesTable::configure($table);
+    }
+
+    /**
+     * Vor- und Nachname (Auftraggeber-Wunsch), nicht nur $recordTitleAttribute
+     * ('last_name') wie im Standardverhalten von Resource::
+     * getGloballySearchableAttributes().
+     *
+     * @return array<string>
+     */
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['first_name', 'last_name'];
+    }
+
+    /**
+     * Voller Name statt nur des Nachnamens (der Standard-Titel ueber
+     * $recordTitleAttribute) - zwei Mitarbeiter mit demselben Nachnamen waeren
+     * sonst im Suchergebnis nicht zu unterscheiden.
+     */
+    public static function getGlobalSearchResultTitle(Model $record): string|Htmlable
+    {
+        /** @var Employee $record */
+        return $record->full_name;
     }
 
     public static function getRelations(): array

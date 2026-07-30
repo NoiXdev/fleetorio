@@ -18,6 +18,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 use UnitEnum;
 
 class VehicleResource extends Resource
@@ -49,6 +50,49 @@ class VehicleResource extends Resource
     public static function table(Table $table): Table
     {
         return VehiclesTable::configure($table);
+    }
+
+    /**
+     * Kennzeichen (siehe $recordTitleAttribute), Marke, Modell und
+     * Fahrgestellnummer direkt am Fahrzeug, dazu der Name des zugeordneten
+     * Mitarbeiters (Auftraggeber-Wunsch: "nach einem Mitarbeiter suchen und
+     * dessen Fahrzeug findet"). 'employee.first_name'/'employee.last_name'
+     * ohne Tabellennamen-Praefix - siehe applyGlobalSearchAttributeConstraint
+     * in vendor/filament/filament/src/Resources/Resource/Concerns/
+     * HasGlobalSearch.php, die daraus ein whereHas('employee', ...) baut.
+     *
+     * Bewusst nicht dabei: die Tankkartennummer (verschluesselt, siehe
+     * CLAUDE.md) und der Tankkartenanbieter (kein naheliegender Suchweg fuer
+     * ein Fahrzeug laut Spezifikation).
+     *
+     * @return array<string>
+     */
+    public static function getGloballySearchableAttributes(): array
+    {
+        return [
+            'license_plate',
+            'brand',
+            'model',
+            'vin',
+            'employee.first_name',
+            'employee.last_name',
+        ];
+    }
+
+    /**
+     * Der Titel des Suchtreffers ist bereits das Kennzeichen
+     * ($recordTitleAttribute) - hier zusaetzlich Marke/Modell und Fahrer, um
+     * mehrere Treffer auseinanderzuhalten (Auftraggeber-Wunsch).
+     *
+     * @return array<string, string>
+     */
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        /** @var Vehicle $record */
+        return [
+            'Fahrzeug' => "{$record->brand} {$record->model}",
+            'Fahrer' => $record->employee?->full_name ?? '—',
+        ];
     }
 
     /**
