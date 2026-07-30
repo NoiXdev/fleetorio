@@ -118,7 +118,17 @@ einmalig angezeigt — sicher aufbewahren. Um 2FA später wieder verpflichtend z
   auf Mailpit; ohne einen echten SMTP-Versand (oder z. B. SES/Postmark) in der Cloud läuft der
   Passwort-Reset-Link auf der Anmeldeseite ins Leere — die Mail wird zwar "erfolgreich"
   verarbeitet, kommt aber nirgends an.
-- Datenbank-Backups einrichten.
+- **Zwei Dinge sichern, nicht mehr nur eines.** Seit Fahrzeugdokumente (Fahrzeugschein,
+  Leasingvertrag, Übergabeprotokoll, HU-Bericht, Versicherungsschein, Sonstiges) hochgeladen
+  werden können, steckt die Anwendung nicht mehr vollständig in einem Datenbank-Dump: die
+  hochgeladenen Dateien liegen auf der Festplatte unter `storage/app/private` (Disk `local`,
+  siehe `config/filesystems.php`), die Datenbank enthält nur noch Metadaten und den — absichtlich
+  nicht erratbaren — Speicherpfad dazu. Beides muss zusammen gesichert werden: ein Dump ohne die
+  Dateien lässt Dokumentzeilen auf nichts mehr zeigen, Dateien ohne den Dump sind ohne Zuordnung
+  zu einem Fahrzeug wertlos.
+- **Beim Umzug auf einen anderen Server** müssen `storage/app/private` und der Datenbank-Dump
+  gemeinsam übertragen werden — nicht nur die Datenbank. Sonst verweisen die
+  `vehicle_documents`-Zeilen auf Dateien, die auf dem neuen Server gar nicht existieren.
 - Queue: siehe Notiz unten zum Export.
 
 ## Deployment als Docker-Image
@@ -177,7 +187,10 @@ beim Containerstart ist unsicher, sobald mehr als eine Instanz läuft. Reihenfol
 
        docker compose exec app php artisan migrate --force
 
-   Das ist ein bewusster, eigener Schritt — der Container tut das nicht von selbst.
+   Das ist ein bewusster, eigener Schritt — der Container tut das nicht von selbst. Kommt ein Dump
+   von einer bestehenden Installation mit, muss auch deren `storage/app/private` in das Volume
+   dieses Containers übertragen werden — sonst zeigen die `vehicle_documents`-Zeilen aus dem Dump
+   auf Dateien, die hier gar nicht existieren.
 4. Container starten.
 5. Bei einer leeren, frisch migrierten Datenbank (kein Dump importiert): im Browser `/setup`
    aufrufen und dort den ersten Benutzer anlegen — keine Konsole am Zielsystem nötig, siehe
@@ -233,9 +246,13 @@ das weiterhin Aufgabe des Proxys.
 - Die Anwendung läuft im Container als `www-data` (uid 33), nicht als root. Der `frankenphp`-
   Prozess kann trotzdem an Port 80/443 binden, weil das Basis-Image ihm bereits die Capability
   `cap_net_bind_service` mitgibt.
-- Persistent zu haltende Pfade: `storage/app` (dort landen erzeugte Exportdateien) und die
-  MariaDB-Daten. `storage/logs` braucht in der Praxis kein eigenes Volume, es sei denn, Logs
-  sollen einen Containerneustart überleben.
+- Persistent zu haltende Pfade: `storage/app` (dort landen erzeugte Exportdateien **und**, unter
+  `storage/app/private`, die hochgeladenen Fahrzeugdokumente — Fahrzeugschein, Leasingvertrag
+  usw.) und die MariaDB-Daten. Die beiliegende `docker-compose.yml` bindet dafür bereits ein
+  Volume auf `/app/storage/app` ein (WORKDIR des Images ist `/app`, `storage/app/private` liegt
+  darunter) — der Pfad war beim Anlegen dieses Features bereits korrekt, keine Änderung nötig.
+  `storage/logs` braucht in der Praxis kein eigenes Volume, es sei denn, Logs sollen einen
+  Containerneustart überleben.
 - Healthcheck des Containers ruft `/` auf (keine Anmeldung nötig) und prüft auf eine echte
   Antwort der Anwendung.
 
@@ -248,6 +265,25 @@ Kostenübersicht gegen diese Konfiguration verifiziert (echte Dateien, korrekte 
 
 Sollte künftig auf `database` umgestellt werden, muss ein Worker laufen
 (`php artisan queue:work`, überwacht durch systemd oder Supervisor).
+
+## Fahrzeugdokumente
+
+Zu jedem Fahrzeug lassen sich Dokumente hinterlegen (Fahrzeugschein, Leasingvertrag,
+Übergabeprotokoll, HU-Bericht, Versicherungsschein, Sonstiges) — Relation Manager am
+Fahrzeugformular, PDF/JPG/PNG bis 10 MB. Ein Fahrzeugschein enthält Fahrgestellnummer und
+Halterdaten, daher der Kernpunkt dieses Features: **die Dateien liegen ausschließlich auf dem
+privaten Disk (`storage/app/private`, Disk `local`) und werden nie direkt vom Webserver
+ausgeliefert.** Kein `public/storage`-Symlink, kein `Storage::url()`, keine signierte URL. Der
+einzige Weg an eine Datei ist `App\Http\Controllers\VehicleDocumentDownloadController`
+(`routes/web.php`, Route `vehicle-documents.download`): hinter der Panel-Session-Authentifizierung
+und mit einer Autorisierungsprüfung bei jeder einzelnen Anfrage, nicht nur beim erstmaligen
+Ausstellen eines Links. Der gespeicherte Dateiname ist zufällig (Filaments `FileUpload` vergibt
+ihn), der ursprüngliche Name steht separat in der Datenbank und wird beim Download wiederverwendet
+(`Content-Disposition`). Hochladen, Ändern und Löschen bleibt Administratoren vorbehalten
+(`App\Policies\VehicleDocumentPolicy`), Lesen und Herunterladen jedem angemeldeten Benutzer —
+konsistent mit den übrigen Fahrzeugdaten. Löschen eines Dokuments oder eines ganzen Fahrzeugs
+entfernt auch die zugehörige(n) Datei(en) von der Festplatte (Model-Events auf `VehicleDocument`
+und `Vehicle`).
 
 ## Fahrzeug-Detailseite
 

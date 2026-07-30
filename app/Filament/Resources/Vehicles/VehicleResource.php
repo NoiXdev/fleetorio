@@ -7,6 +7,7 @@ use App\Filament\Resources\Vehicles\Pages\EditVehicle;
 use App\Filament\Resources\Vehicles\Pages\ListVehicles;
 use App\Filament\Resources\Vehicles\Pages\ViewVehicle;
 use App\Filament\Resources\Vehicles\RelationManagers\VehicleAppointmentsRelationManager;
+use App\Filament\Resources\Vehicles\RelationManagers\VehicleDocumentsRelationManager;
 use App\Filament\Resources\Vehicles\Schemas\VehicleForm;
 use App\Filament\Resources\Vehicles\Schemas\VehicleInfolist;
 use App\Filament\Resources\Vehicles\Tables\VehiclesTable;
@@ -53,6 +54,7 @@ class VehicleResource extends Resource
     {
         return [
             VehicleAppointmentsRelationManager::class,
+            VehicleDocumentsRelationManager::class,
         ];
     }
 
