@@ -4,6 +4,7 @@ namespace App\Filament\Resources\LeasingCompanies\Tables;
 
 use App\Filament\Actions\GuardedDeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -28,6 +29,7 @@ class LeasingCompaniesTable
             ])
             ->defaultSort('name')
             ->recordActions([
+                ViewAction::make(),
                 EditAction::make(),
                 GuardedDeleteAction::make(),
             ]);

@@ -5,7 +5,9 @@ namespace App\Filament\Resources\LeasingCompanies;
 use App\Filament\Resources\LeasingCompanies\Pages\CreateLeasingCompany;
 use App\Filament\Resources\LeasingCompanies\Pages\EditLeasingCompany;
 use App\Filament\Resources\LeasingCompanies\Pages\ListLeasingCompanies;
+use App\Filament\Resources\LeasingCompanies\Pages\ViewLeasingCompany;
 use App\Filament\Resources\LeasingCompanies\Schemas\LeasingCompanyForm;
+use App\Filament\Resources\LeasingCompanies\Schemas\LeasingCompanyInfolist;
 use App\Filament\Resources\LeasingCompanies\Tables\LeasingCompaniesTable;
 use App\Models\LeasingCompany;
 use BackedEnum;
@@ -34,6 +36,11 @@ class LeasingCompanyResource extends Resource
         return LeasingCompanyForm::configure($schema);
     }
 
+    public static function infolist(Schema $schema): Schema
+    {
+        return LeasingCompanyInfolist::configure($schema);
+    }
+
     public static function table(Table $table): Table
     {
         return LeasingCompaniesTable::configure($table);
@@ -51,6 +58,7 @@ class LeasingCompanyResource extends Resource
         return [
             'index' => ListLeasingCompanies::route('/'),
             'create' => CreateLeasingCompany::route('/create'),
+            'view' => ViewLeasingCompany::route('/{record}'),
             'edit' => EditLeasingCompany::route('/{record}/edit'),
         ];
     }
