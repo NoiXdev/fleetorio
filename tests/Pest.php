@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 /*
@@ -16,6 +17,13 @@ use Tests\TestCase;
 
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
+    // Der Testtreiber fuer den Cache ist 'array' (siehe phpunit.xml) - er
+    // lebt fuer die gesamte Prozesslaufzeit, nicht nur fuer einen Test.
+    // Anders als die Datenbank (per RefreshDatabase pro Test zurueckgesetzt)
+    // wuerde App\Models\AppSetting::cached() ohne dieses Flush ueber
+    // Testgrenzen hinweg stehen bleiben, z. B. wenn ein Test Standardwerte
+    // liest, bevor ein spaeterer Test eigene Einstellungen speichert.
+    ->beforeEach(fn () => Cache::flush())
     ->in('Feature');
 
 /*
