@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BrandLogoController;
 use App\Http\Controllers\SetupController;
 use App\Http\Controllers\VehicleDocumentDownloadController;
 use App\Http\Controllers\VehicleImageController;
@@ -65,3 +66,12 @@ Route::get('/vehicle-documents/{vehicleDocument}/view', [VehicleDocumentDownload
 Route::get('/vehicle-images/{vehicle}/show', VehicleImageController::class)
     ->middleware('auth')
     ->name('vehicle-images.show');
+
+/*
+ * Liefert ein hochgeladenes Firmenlogo aus - siehe Kommentar am Controller
+ * fuer die Begruendung, warum diese Route bewusst OHNE 'auth'-Middleware
+ * bleibt (das Logo wird auf der Anmeldeseite und als Favicon gebraucht,
+ * beides ohne Session erreichbar) und wie mit dem SVG-Risiko umgegangen
+ * wird.
+ */
+Route::get('/branding/logo', BrandLogoController::class)->name('branding.logo');
