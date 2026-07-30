@@ -2,17 +2,30 @@
 
 use App\Enums\FuelType;
 use App\Models\Employee;
+use App\Models\User;
 use App\Models\Vehicle;
 
 it('serves the public overview page to guests', function () {
     $this->get('/')->assertOk();
 });
 
-it('shows a prominent login link to the admin panel', function () {
+it('shows a prominent login link to the admin panel once a user exists', function () {
+    User::factory()->create();
+
     $this->get('/')
         ->assertOk()
         ->assertSee('Anmelden')
         ->assertSee('/admin/login', escape: false);
+});
+
+it('points to the setup assistant instead of login while no user exists', function () {
+    expect(User::count())->toBe(0);
+
+    $this->get('/')
+        ->assertOk()
+        ->assertSee('Einrichtung starten')
+        ->assertSee('/setup', escape: false)
+        ->assertDontSee('Anmelden');
 });
 
 it('shows the company logo and uses it as favicon', function () {

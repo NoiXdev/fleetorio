@@ -20,11 +20,30 @@ Erweiterung `intl` (die fordert Filament).
     ddev composer install
     ddev artisan key:generate
     ddev artisan migrate
-    ddev artisan make:filament-user
 
 DDEV legt die `.env` beim ersten Start mit den Datenbankzugängen selbst an. `key:generate`
 schreibt den `APP_KEY` hinein — **ohne ihn startet die Anwendung nicht**, und er darf danach
 nicht mehr wechseln (siehe *Betrieb in der Cloud*).
+
+Danach im Browser `/setup` aufrufen — der empfohlene Weg zum ersten Zugang, siehe
+*Ersteinrichtung* weiter unten.
+
+## Ersteinrichtung
+
+Solange in der Datenbank kein einziger Benutzer existiert, ist unter `/setup` ein
+Einrichtungsassistent erreichbar (Name, E-Mail, Passwort mit Bestätigung). Das Absenden legt
+direkt einen Administrator mit Kostenrecht an, meldet ihn an und leitet zum Dashboard weiter.
+
+Sobald ein Benutzer existiert, antwortet `/setup` nur noch mit 404 — sowohl beim Anzeigen als
+auch beim Absenden. Das ist Absicht: eine dauerhaft erreichbare Einrichtungsseite wäre eine
+Hintertür zum Administratorkonto, deshalb hängt die Sperre am Benutzerbestand selbst statt an
+einem Schalter, den man hinterher von Hand abstellen müsste. Sollte je kein Benutzer mehr
+existieren, öffnet sich `/setup` genau deswegen von selbst wieder — das ist der Rettungsweg,
+falls man sich einmal ausgesperrt hat.
+
+Alternativ bleibt der bisherige Weg über die Konsole:
+
+    ddev artisan make:filament-user
 
 Der so erzeugte Benutzer hat die Rolle *Nur-Lesen*; wie er Administrator wird, steht unter
 *Benutzer und Rechte*.
@@ -58,9 +77,11 @@ Rechte:
 - **Darf Kosten sehen** — unabhängig von der Rolle. Ohne dieses Recht bleiben alle Beträge
   verborgen, auch der Menüpunkt *Kosten*.
 
-Der erste Benutzer wird über `ddev artisan make:filament-user` angelegt; dieser Befehl erzeugt
-immer einen Benutzer mit der Rolle *Nur-Lesen*, und `/admin/users` ist für diese Rolle gesperrt
-— er kann sich also nicht selbst zum Administrator befördern. Dafür einmalig per Tinker:
+Der erste Benutzer entsteht am einfachsten über den Setup-Assistenten unter `/setup` (siehe
+*Ersteinrichtung*) — der legt direkt einen Administrator mit Kostenrecht an. Alternativ über die
+Konsole: `ddev artisan make:filament-user` erzeugt immer einen Benutzer mit der Rolle
+*Nur-Lesen*, und `/admin/users` ist für diese Rolle gesperrt — er kann sich also nicht selbst zum
+Administrator befördern. Dafür einmalig per Tinker:
 
     ddev artisan tinker
     App\Models\User::where('email', '…')->firstOrFail()->update(['role' => 'admin', 'can_view_costs' => true]);
@@ -158,6 +179,10 @@ beim Containerstart ist unsicher, sobald mehr als eine Instanz läuft. Reihenfol
 
    Das ist ein bewusster, eigener Schritt — der Container tut das nicht von selbst.
 4. Container starten.
+5. Bei einer leeren, frisch migrierten Datenbank (kein Dump importiert): im Browser `/setup`
+   aufrufen und dort den ersten Benutzer anlegen — keine Konsole am Zielsystem nötig, siehe
+   *Ersteinrichtung* weiter oben. Bei einem importierten Dump existiert bereits ein Benutzer,
+   `/setup` bleibt dann von selbst gesperrt (404).
 
 ### `APP_KEY` — nicht neu erzeugen
 

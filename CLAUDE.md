@@ -42,6 +42,11 @@ Feldnamen ab.
   nicht erneut hinschreiben.
 - **`->searchable()` auf einer Relations-Spalte** darf keinen Tabellennamen als Präfix tragen.
   Filament deutet den Punkt sonst als JSON-Pfad und erzeugt ungültiges SQL.
+- **Der Setup-Assistent (`/setup`, `App\Http\Controllers\SetupController`)** ist nur erreichbar,
+  solange kein Benutzer existiert — das ist die gesamte Absicherung, kein Flag und kein Token.
+  Wer Route oder Controller ändert, muss diese Prüfung für GET und POST einzeln erhalten
+  (inklusive der `lockForUpdate()`-Transaktion gegen das Wettrennen zweier gleichzeitiger
+  Anfragen) und darf sie nicht versehentlich auf eine einzige Stelle zusammenziehen.
 
 ## Dokumentation
 
