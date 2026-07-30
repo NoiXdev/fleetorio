@@ -44,12 +44,23 @@ class FleetOverview extends BaseWidget
         $description = $counts->isEmpty()
             ? 'Noch keine Fahrzeuge erfasst'
             : new HtmlString(
-                $counts->map(function (int $total, string $fuelType): string {
+                // Jedes Icon-Text-Paar steckt in einem eigenen inline-flex, sonst
+                // bricht Filaments Icon-Element (kein Inline-Element) die Zeile
+                // und das Symbol landet ueber statt neben dem Text. Inline-Styles
+                // statt Tailwind-Klassen, weil nicht garantiert ist, dass die
+                // benoetigten Klassen im kompilierten Panel-CSS enthalten sind -
+                // dieses Widget ist die einzige Stelle, die sie braeuchte.
+                '<span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:.375rem">'
+                .$counts->map(function (int $total, string $fuelType): string {
                     $type = FuelType::from($fuelType);
                     $icon = generate_icon_html($type->getIcon(), size: IconSize::Small);
 
-                    return $icon?->toHtml().e("{$total} {$type->getLabel()}");
-                })->implode(' · ')
+                    return '<span style="display:inline-flex;align-items:center;gap:.25rem;white-space:nowrap">'
+                        .$icon?->toHtml()
+                        .e("{$total} {$type->getLabel()}")
+                        .'</span>';
+                })->implode('<span style="opacity:.5">·</span>')
+                .'</span>'
             );
 
         return Stat::make('Aktive Fahrzeuge', (string) Vehicle::active()->count())
