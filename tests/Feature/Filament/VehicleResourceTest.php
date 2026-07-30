@@ -3,6 +3,7 @@
 use App\Enums\FuelCardProvider;
 use App\Enums\FuelType;
 use App\Enums\VehicleStatus;
+use App\Filament\Exports\VehicleExporter;
 use App\Filament\Resources\Vehicles\Pages\CreateVehicle;
 use App\Filament\Resources\Vehicles\Pages\EditVehicle;
 use App\Filament\Resources\Vehicles\Pages\ListVehicles;
@@ -13,6 +14,7 @@ use App\Models\User;
 use App\Models\Vehicle;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 use function Pest\Laravel\actingAs;
@@ -197,6 +199,113 @@ it('rejects a duplicate licence plate', function () {
         ->assertHasFormErrors(['license_plate' => 'unique']);
 });
 
+describe('the vin field', function () {
+    it('accepts a valid vin', function () {
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        livewire(CreateVehicle::class)
+            ->fillForm([
+                'brand' => 'VW',
+                'model' => 'Passat',
+                'license_plate' => 'M-VN 0001',
+                'vin' => 'WVWZZZ1KZAW123456',
+                'fuel_type' => FuelType::Diesel->value,
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        assertDatabaseHas(Vehicle::class, [
+            'license_plate' => 'M-VN 0001',
+            'vin' => 'WVWZZZ1KZAW123456',
+        ]);
+    });
+
+    it('allows an empty vin, since older vehicles do not always have one on record', function () {
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        livewire(CreateVehicle::class)
+            ->fillForm([
+                'brand' => 'VW',
+                'model' => 'Passat',
+                'license_plate' => 'M-VN 0002',
+                'vin' => null,
+                'fuel_type' => FuelType::Diesel->value,
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+    });
+
+    it('rejects a vin that is too short', function () {
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        livewire(CreateVehicle::class)
+            ->fillForm([
+                'brand' => 'VW',
+                'model' => 'Passat',
+                'license_plate' => 'M-VN 0003',
+                'vin' => 'WVWZZZ1KZAW12345',
+                'fuel_type' => FuelType::Diesel->value,
+            ])
+            ->call('create')
+            ->assertHasFormErrors(['vin' => 'regex']);
+    });
+
+    it('rejects a vin containing the letter i, which vins may never contain', function () {
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        livewire(CreateVehicle::class)
+            ->fillForm([
+                'brand' => 'VW',
+                'model' => 'Passat',
+                'license_plate' => 'M-VN 0004',
+                'vin' => 'WVWZZZ1KZAWI23456',
+                'fuel_type' => FuelType::Diesel->value,
+            ])
+            ->call('create')
+            ->assertHasFormErrors(['vin' => 'regex']);
+    });
+
+    it('uppercases a lowercase vin before validating and storing it', function () {
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        livewire(CreateVehicle::class)
+            ->fillForm([
+                'brand' => 'VW',
+                'model' => 'Passat',
+                'license_plate' => 'M-VN 0005',
+                'vin' => 'wvwzzz1kzaw123456',
+                'fuel_type' => FuelType::Diesel->value,
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        assertDatabaseHas(Vehicle::class, [
+            'license_plate' => 'M-VN 0005',
+            'vin' => 'WVWZZZ1KZAW123456',
+        ]);
+    });
+});
+
+it('does not show the vin in the vehicle list', function () {
+    // Die Liste ist breit genug und die VIN ist nichts, wonach man visuell
+    // sucht (Auftraggeber-Entscheidung) - anders als beim Export bleibt sie
+    // hier aussen vor.
+    actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+    Vehicle::factory()->create(['vin' => 'WVWZZZ1KZAW123456']);
+
+    livewire(ListVehicles::class)
+        ->assertOk()
+        ->assertDontSee('WVWZZZ1KZAW123456');
+});
+
+it('includes the vin as a column in the vehicle export', function () {
+    $vinColumn = collect(VehicleExporter::getColumns())
+        ->first(fn ($column) => $column->getName() === 'vin');
+
+    expect($vinColumn)->not->toBeNull();
+});
+
 it('labels the fuel card option with provider and full card number', function () {
     // Auftraggeber-Entscheidung: Die Zuordnung war mit der maskierten Nummer
     // umstaendlich. Anbieter + volle Nummer, damit man bei mehreren Anbietern
@@ -281,6 +390,69 @@ describe('the image field', function () {
         $preview = array_values($uploadedFiles)[0];
 
         expect($preview['url'])->toBe(route('vehicle-images.show', $vehicle));
+    });
+
+    it('still stores an uploaded image on the private disk, not the public one', function () {
+        // Belegt, dass ein Upload trotz imageEditor()/imageAspectRatio()/
+        // automaticallyResizeImagesToWidth() weiterhin funktioniert. Die
+        // Verkleinerung auf 2000 Pixel selbst laeuft ausschliesslich im
+        // Browser (FilePondPluginImageResize, siehe Bericht) - ein
+        // fillForm()-Test im PHP-Prozess durchlaeuft diesen JS-Schritt nicht
+        // und kann seine Wirkung deshalb hier nicht belegen. 800x600 (4:3)
+        // besteht aber die serverseitige Rule::dimensions()->ratio()-Pruefung
+        // aus imageAspectRatio('4:3'), die unabhaengig vom Editor greift.
+        Storage::fake('local');
+        Storage::fake('public');
+
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        $file = UploadedFile::fake()->image('fahrzeug.jpg', 800, 600);
+
+        livewire(CreateVehicle::class)
+            ->fillForm([
+                'brand' => 'VW',
+                'model' => 'Passat',
+                'license_plate' => 'M-IMG 0001',
+                'fuel_type' => FuelType::Diesel->value,
+                'image_path' => $file,
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $vehicle = Vehicle::where('license_plate', 'M-IMG 0001')->firstOrFail();
+
+        Storage::disk('local')->assertExists($vehicle->image_path);
+        Storage::disk('public')->assertMissing($vehicle->image_path);
+    });
+
+    it('rejects an image that is not cropped to 4:3, even bypassing the browser editor', function () {
+        // Serverseitige Zweitpruefung fuer den Fall, dass ein Bild ohne
+        // Browser-JS eingereicht wird (siehe Kommentar in VehicleForm):
+        // imageAspectRatio('4:3') erzeugt Rule::dimensions()->ratio(4/3),
+        // unabhaengig vom clientseitigen Bildeditor.
+        Storage::fake('local');
+
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        $file = UploadedFile::fake()->image('quadratisch.jpg', 800, 800);
+
+        $component = livewire(CreateVehicle::class)
+            ->fillForm([
+                'brand' => 'VW',
+                'model' => 'Passat',
+                'license_plate' => 'M-IMG 0002',
+                'fuel_type' => FuelType::Diesel->value,
+                'image_path' => $file,
+            ])
+            ->call('create')
+            ->assertHasFormErrors(['image_path']);
+
+        // Rule::dimensions() liefert die generische Laravel-Meldung
+        // "invalid image dimensions" statt eines einfachen "dimensions"-
+        // Regelnamens (siehe BaseFileUpload::getRules()) - assertHasFormErrors()
+        // oben belegt nur, dass ueberhaupt ein Fehler an diesem Feld haengt.
+        expect($component->instance()->getErrorBag()->first('data.image_path'))
+            ->toContain('invalid image dimensions');
     });
 });
 
@@ -555,4 +727,105 @@ it('stops a viewer from reaching the edit page at all', function () {
     actingAs(User::factory()->viewer()->withTwoFactor()->create());
 
     $this->get("/admin/vehicles/{$vehicle->id}/edit")->assertForbidden();
+});
+
+it('places notes after documents and appointments on the edit page', function () {
+    // Auftraggeber-Wunsch: Fahrzeug, Zuordnung, Vertrag & Service, Kosten,
+    // Dokumente, Termine, Notizen - Notizen ganz nach unten, auch im
+    // Formular. Siehe EditVehicle::content() fuer den Mechanismus (eigene
+    // 'notesForm'-Schema, erst nach den Relationsmanagern eingebettet).
+    actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+    $vehicle = Vehicle::factory()->create();
+
+    $html = livewire(EditVehicle::class, ['record' => $vehicle->id])->html();
+
+    $documentsPosition = strpos($html, 'Dokumente');
+    $appointmentsPosition = strpos($html, 'Termine');
+    $notesPosition = strpos($html, 'Notizen');
+
+    expect($documentsPosition)->not->toBeFalse()
+        ->and($appointmentsPosition)->not->toBeFalse()
+        ->and($notesPosition)->not->toBeFalse()
+        ->and($documentsPosition)->toBeLessThan($appointmentsPosition)
+        ->and($appointmentsPosition)->toBeLessThan($notesPosition);
+});
+
+it('still saves notes correctly even though they render in a separate schema after the relation managers', function () {
+    // Die Notizen-Schema teilt sich den statePath 'data' mit der 'form'-
+    // Schema (siehe EditVehicle::defaultNotesForm()), landet aber nicht mehr
+    // in deren getState() - EditVehicle::mutateFormDataBeforeSave() setzt
+    // den Wert von Hand wieder ein. Dieser Test belegt, dass das
+    // tatsaechlich funktioniert, nicht nur dass die Reihenfolge stimmt.
+    actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+    $vehicle = Vehicle::factory()->create(['notes' => 'Alte Notiz']);
+
+    livewire(EditVehicle::class, ['record' => $vehicle->id])
+        ->fillForm(['notes' => 'Neue Notiz'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($vehicle->refresh()->notes)->toBe('Neue Notiz');
+});
+
+describe('the button row on the edit page', function () {
+    it('offers "Speichern" in the header, saving without leaving the page', function () {
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        $vehicle = Vehicle::factory()->create(['brand' => 'VW']);
+
+        livewire(EditVehicle::class, ['record' => $vehicle->id])
+            ->assertActionExists('save')
+            ->fillForm(['brand' => 'Audi'])
+            ->callAction('save')
+            ->assertHasNoFormErrors();
+
+        expect($vehicle->refresh()->brand)->toBe('Audi');
+    });
+
+    it('offers "Speichern und schließen" at the bottom, saving and redirecting away', function () {
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        $vehicle = Vehicle::factory()->create(['brand' => 'VW']);
+
+        livewire(EditVehicle::class, ['record' => $vehicle->id])
+            ->fillForm(['brand' => 'Audi'])
+            ->call('save')
+            ->assertHasNoFormErrors()
+            ->assertRedirect();
+
+        expect($vehicle->refresh()->brand)->toBe('Audi');
+    });
+
+    it('keeps a plain "Abbrechen" action available', function () {
+        // Abbrechen ist ein reiner Alpine-Klick-Handler ohne Bestaetigung
+        // (kein requiresConfirmation()) und braucht deshalb - anders als
+        // "Löschen" - keine eigene {name}Action()-Methode, um klickbar zu
+        // sein (siehe Kommentar an EditVehicle::deleteAction()). Die
+        // Beschriftung ist statischer Text und erscheint deshalb zuverlaessig
+        // im gerenderten HTML, anders als ein gebundener Feldwert.
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        $vehicle = Vehicle::factory()->create();
+
+        livewire(EditVehicle::class, ['record' => $vehicle->id])
+            ->assertSee('Abbrechen');
+    });
+
+    it('keeps the delete action reachable, requiring confirmation, styled as an outline instead of a solid button', function () {
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        $vehicle = Vehicle::factory()->create();
+
+        $page = livewire(EditVehicle::class, ['record' => $vehicle->id])
+            ->assertActionExists(DeleteAction::class)
+            ->instance();
+
+        $action = $page->deleteAction();
+
+        expect($action->isOutlined())->toBeTrue()
+            ->and($action->getColor())->toBe('danger')
+            ->and($action->isConfirmationRequired())->toBeTrue();
+    });
 });

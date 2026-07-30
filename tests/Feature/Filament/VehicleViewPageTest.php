@@ -261,3 +261,27 @@ describe('documents and appointments stacked instead of tabbed', function () {
             ->toContain('Fahrzeugschein Original');
     });
 });
+
+it('places notes after documents and appointments on the view page', function () {
+    // Auftraggeber-Wunsch: Fahrzeug, Zuordnung, Vertrag & Service, Kosten,
+    // Dokumente, Termine, Notizen - Notizen ganz nach unten. Filament rendert
+    // eingebettete Relationsmanager grundsaetzlich erst nach der kompletten
+    // Infolist-Schema (siehe EditRecord/ViewRecord::content()); "Notizen"
+    // ist deshalb eine eigene, zweite Schema, die ViewVehicle erst nach den
+    // Relationsmanagern einbettet (siehe ViewVehicle::content()).
+    actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+    $vehicle = Vehicle::factory()->create();
+
+    $html = livewire(ViewVehicle::class, ['record' => $vehicle->id])->html();
+
+    $documentsPosition = strpos($html, 'Dokumente');
+    $appointmentsPosition = strpos($html, 'Termine');
+    $notesPosition = strpos($html, 'Notizen');
+
+    expect($documentsPosition)->not->toBeFalse()
+        ->and($appointmentsPosition)->not->toBeFalse()
+        ->and($notesPosition)->not->toBeFalse()
+        ->and($documentsPosition)->toBeLessThan($appointmentsPosition)
+        ->and($appointmentsPosition)->toBeLessThan($notesPosition);
+});

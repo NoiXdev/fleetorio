@@ -50,6 +50,7 @@ class Vehicle extends Model
         'brand',
         'model',
         'license_plate',
+        'vin',
         'image_path',
         'fuel_type',
         'employee_id',

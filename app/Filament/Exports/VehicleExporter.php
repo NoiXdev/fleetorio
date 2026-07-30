@@ -20,6 +20,7 @@ class VehicleExporter extends Exporter
     {
         return [
             ExportColumn::make('license_plate')->label('Kennzeichen'),
+            ExportColumn::make('vin')->label('Fahrgestellnummer (VIN)'),
             ExportColumn::make('brand')->label('Marke'),
             ExportColumn::make('model')->label('Modell'),
             ExportColumn::make('fuel_type')->label('Antriebsart'),
