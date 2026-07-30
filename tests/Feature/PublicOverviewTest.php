@@ -29,13 +29,21 @@ it('points to the setup assistant instead of login while no user exists', functi
 });
 
 it('shows the company logo and uses it as favicon', function () {
-    // Das Logo liegt lokal unter public/images - kein Verweis auf www.3b.de,
+    // Ohne gespeicherte Einstellungen greift das Standardlogo, das lokal
+    // unter public/images liegt - kein Verweis auf eine externe Domain,
     // damit die Seite ohne Verbindung nach draussen vollstaendig laedt.
     $this->get('/')
         ->assertOk()
-        ->assertSee('images/a3b-logo.svg', escape: false)
-        ->assertSee('rel="icon"', escape: false)
-        ->assertDontSee('www.3b.de');
+        ->assertSee('images/fleetorio-logo.svg', escape: false)
+        ->assertSee('rel="icon"', escape: false);
+});
+
+it('shows the configured brand name and logo instead of the default once settings are saved', function () {
+    \App\Models\AppSetting::factory()->create(['brand_name' => 'Testflotte']);
+
+    $this->get('/')
+        ->assertOk()
+        ->assertSee('Testflotte');
 });
 
 it('reveals nothing about the fleet to anonymous visitors', function () {

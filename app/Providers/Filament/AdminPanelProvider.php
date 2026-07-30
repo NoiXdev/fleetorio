@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\Auth\Login;
+use App\Models\AppSetting;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -27,42 +28,37 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->brandName('3B Fuhrparkmanagement')
-            ->brandLogo(asset('images/a3b-logo.svg'))
+            // Name, Logo/Favicon und Primärfarbe kommen aus den über die
+            // Oberfläche pflegbaren Einstellungen (App\Filament\Pages\
+            // AppearanceSettings), mit den dortigen Konstanten als
+            // Rückfallebene. WICHTIG: panel() hier läuft bei jedem
+            // Boot-Zyklus der Anwendung neu (nicht nur einmal beim Start),
+            // also praktisch bei jedem Request und jedem artisan-Aufruf.
+            // AppSetting::* ist deshalb zwischengespeichert und verträgt
+            // eine fehlende oder unerreichbare Datenbank, ohne zu brechen -
+            // siehe die Kommentare dort für Details.
+            ->brandName(AppSetting::name())
+            ->brandLogo(AppSetting::logoUrl())
             ->brandLogoHeight('2rem')
-            ->favicon(asset('images/a3b-logo.png'))
-            // Primärfarbe ist das Markenrot #bb0000 = oklch(0.497 0.204 29.234).
+            ->favicon(AppSetting::logoUrl())
+            // Die Palette steht hier ausgeschrieben (statt Color::hex()),
+            // weil Color::hex() aus der Eingabefarbe nur den Farbwinkel
+            // übernimmt und Helligkeit/Sättigung durch eine feste Kurve
+            // ersetzt - Stufe 600, die Filament in Schaltflächen am
+            // häufigsten verwendet, träfe die gewählte Farbe dadurch
+            // praktisch nie exakt. AppSetting::buildPalette() skaliert
+            // stattdessen Filaments eigene Kurve so, dass Stufe 600 exakt
+            // die eingestellte Primärfarbe ist - siehe dortiger Kommentar
+            // für die Herleitung der übrigen Stufen.
             //
-            // Die Palette steht hier ausgeschrieben, weil Color::hex() sie nicht
-            // treffen kann: Diese Methode übernimmt aus der Eingabefarbe nur den
-            // Farbwinkel und ersetzt Helligkeit und Sättigung durch feste Werte
-            // (siehe Color::generatePalette()). Für Stufe 600 - die Filament in
-            // Schaltflächen am häufigsten verwendet - käme oklch(0.598 0.169 …)
-            // heraus: heller und blasser als das Markenrot.
-            //
-            // Deshalb liegt #bb0000 unten exakt auf Stufe 600. Die helleren
-            // Stufen behalten Filaments Kurve (sie dienen Hintergründen und
-            // Abzeichen und sollen hell bleiben), die Stufen ab 400 führen zum
-            // Markenrot hin und darüber hinaus ins Dunkle.
-            //
-            // 'danger' ist auf Rose verschoben: Filament nutzt es für
-            // Löschbestätigungen, Fehler und Warnungen. Bliebe es rot, wäre ein
-            // "Speichern"-Knopf nicht von einem "Löschen"-Knopf zu
+            // 'danger' bleibt auf Rose verschoben, unabhängig von der
+            // gewählten Primärfarbe: Filament nutzt es für
+            // Löschbestätigungen, Fehler und Warnungen. Wählte ein
+            // Administrator zufällig eine rötliche Primärfarbe, wäre ein
+            // "Speichern"-Knopf sonst von einem "Löschen"-Knopf kaum zu
             // unterscheiden. 'warning' und 'success' bleiben unverändert.
             ->colors([
-                'primary' => [
-                    50 => 'oklch(0.977 0.014 29.234)',
-                    100 => 'oklch(0.950 0.033 29.234)',
-                    200 => 'oklch(0.905 0.063 29.234)',
-                    300 => 'oklch(0.840 0.106 29.234)',
-                    400 => 'oklch(0.740 0.170 29.234)',
-                    500 => 'oklch(0.620 0.195 29.234)',
-                    600 => 'oklch(0.497 0.204 29.234)', // #bb0000
-                    700 => 'oklch(0.440 0.185 29.234)',
-                    800 => 'oklch(0.390 0.160 29.234)',
-                    900 => 'oklch(0.345 0.135 29.234)',
-                    950 => 'oklch(0.250 0.090 29.234)',
-                ],
+                'primary' => AppSetting::palette(),
                 'danger' => Color::Rose,
             ])
             ->login(Login::class)
@@ -71,7 +67,7 @@ class AdminPanelProvider extends PanelProvider
             ->multiFactorAuthentication([
                 AppAuthentication::make()
                     ->recoverable()
-                    ->brandName('3B Fuhrparkmanagement'),
+                    ->brandName(AppSetting::name()),
             ], isRequired: false)
             ->navigationGroups([
                 'Fuhrpark',

@@ -1,14 +1,14 @@
+<?php $brandName = \App\Models\AppSetting::name(); ?>
 <!doctype html>
 <html lang="de">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
-    <title>3B Fuhrparkmanagement</title>
+    <title>{{ $brandName }}</title>
 
-    <link rel="icon" type="image/svg+xml" href="{{ asset('images/a3b-logo.svg') }}">
-    <link rel="icon" type="image/png" href="{{ asset('images/a3b-logo.png') }}">
-    <link rel="apple-touch-icon" href="{{ asset('images/a3b-logo.png') }}">
+    <link rel="icon" href="{{ \App\Models\AppSetting::logoUrl() }}">
+    <link rel="apple-touch-icon" href="{{ \App\Models\AppSetting::logoUrl() }}">
 
     {{-- Inter liegt lokal in den Filament-Assets. Bewusst keine externe Schriftquelle:
          die Seite soll ohne Verbindung nach draußen laden. Die Hausschrift Klint ist
@@ -19,12 +19,9 @@
 </head>
 <body>
     <main class="card">
-        <img class="logo" src="{{ asset('images/a3b-logo.svg') }}" alt="Agentur3B" width="56" height="60">
+        <img class="logo" src="{{ \App\Models\AppSetting::logoUrl() }}" alt="{{ $brandName }}" width="56" height="60">
 
-        <h1>
-            <span>Agentur3B</span>
-            Fuhrparkmanagement
-        </h1>
+        <h1>{{ $brandName }}</h1>
 
         <p>Fahrzeuge, Leasingzeiträume und weitere Infos &ndash; einfach zentral dokumentiert.</p>
 

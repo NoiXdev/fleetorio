@@ -5,13 +5,25 @@
     draussen vollstaendig laden. Kein Framework - nur die eine Style-Regel,
     die sonst zweimal wortgleich stuende.
 --}}
+<?php
+    // Markenfarbe kommt aus den Einstellungen (App\Models\AppSetting).
+    // Die Hover-Variante wird aus derselben Palette abgeleitet, die auch das
+    // Filament-Panel verwendet (AppSetting::buildPalette()): Stufe 700 fuer
+    // Hell (dunkler als die Basis, wie zuvor #950000 dunkler war als
+    // #bb0000), Stufe 500 fuer Dunkel (heller als die Basis, damit ein Hover
+    // auf dunklem Hintergrund sichtbar aufhellt statt noch dunkler zu
+    // wirken - wie zuvor #d40000 heller war als #bb0000).
+    $brand = \App\Models\AppSetting::color();
+    $brandPalette = \App\Models\AppSetting::palette();
+    $brandHoverLight = \Filament\Support\Colors\Color::convertToHex($brandPalette[700]);
+    $brandHoverDark = \Filament\Support\Colors\Color::convertToHex($brandPalette[500]);
+?>
 <style>
-    /* Corporate Design Agentur3B: Rot #bb0000 auf Schwarz und Weiss. */
     :root {
         color-scheme: light dark;
 
-        --brand: #bb0000;
-        --brand-hover: #950000;
+        --brand: {{ $brand }};
+        --brand-hover: {{ $brandHoverLight }};
         --ink: #101010;
         --ink-soft: #5a5a5a;
         --surface: #ffffff;
@@ -22,8 +34,8 @@
 
     @media (prefers-color-scheme: dark) {
         :root {
-            --brand: #bb0000;
-            --brand-hover: #d40000;
+            --brand: {{ $brand }};
+            --brand-hover: {{ $brandHoverDark }};
             --ink: #f4f4f5;
             --ink-soft: #a1a1a6;
             --surface: #161618;

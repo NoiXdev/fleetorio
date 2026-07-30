@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages\Auth;
 
+use App\Models\AppSetting;
 use Filament\Auth\Pages\Login as BaseLogin;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Component;
@@ -16,7 +17,7 @@ class Login extends BaseLogin
      */
     public function getHeading(): string | Htmlable | null
     {
-        return 'Login zum Fuhrparkmanagement';
+        return 'Login zum '.AppSetting::name();
     }
 
     /**

@@ -1,0 +1,21 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Fleetorio">
+    <!--
+        Standardlogo der Anwendung (Name: Fleetorio). Wird verwendet, solange in
+        den Einstellungen kein eigenes Logo hinterlegt ist.
+
+        Motiv: ein Rad als kleinster gemeinsamer Nenner jedes Fahrzeugs, links
+        Bewegungslinien fuer Richtung und Tempo. Bewusst aus wenigen, klar
+        getrennten Formen aufgebaut - das Logo erscheint ueberwiegend als
+        Favicon mit 16 Pixeln, und dort verliert alles Feingliedrige seine
+        Lesbarkeit.
+
+        Die Farbe ist ein neutrales Blau, kein Markenrot: sie ist der
+        Standardwert fuer beliebige Installationen. Wer ein eigenes Logo
+        hinterlegt, bringt seine Farbe mit.
+    -->
+    <rect width="64" height="64" rx="15" fill="#2563eb"/>
+    <circle cx="41" cy="32" r="13" fill="none" stroke="#fff" stroke-width="7"/>
+    <rect x="10" y="19" width="18" height="6.5" rx="3.25" fill="#fff" opacity=".55"/>
+    <rect x="6" y="28.75" width="22" height="6.5" rx="3.25" fill="#fff"/>
+    <rect x="10" y="38.5" width="18" height="6.5" rx="3.25" fill="#fff" opacity=".55"/>
+</svg>
