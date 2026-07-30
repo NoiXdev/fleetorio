@@ -7,6 +7,7 @@ use App\Models\LeasingCompany;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleAppointment;
+use App\Models\VehicleDocument;
 
 beforeEach(function () {
     $this->admin = User::factory()->admin()->create();
@@ -64,6 +65,22 @@ it('lets everyone read appointments but only admins write them', function () {
         ->and($this->admin->can('create', VehicleAppointment::class))->toBeTrue()
         ->and($this->admin->can('update', $appointment))->toBeTrue()
         ->and($this->admin->can('delete', $appointment))->toBeTrue();
+});
+
+it('lets everyone read documents but only admins write them', function () {
+    // Der Kern der Aufgabe: ein Fahrzeugschein enthaelt Fahrgestellnummer und
+    // Halterdaten - Hochladen/Aendern/Loeschen bleibt Administratoren
+    // vorbehalten, Lesen/Herunterladen jedem angemeldeten Benutzer.
+    $document = VehicleDocument::factory()->for(Vehicle::factory())->create();
+
+    expect($this->viewer->can('viewAny', VehicleDocument::class))->toBeTrue()
+        ->and($this->viewer->can('view', $document))->toBeTrue()
+        ->and($this->viewer->can('create', VehicleDocument::class))->toBeFalse()
+        ->and($this->viewer->can('update', $document))->toBeFalse()
+        ->and($this->viewer->can('delete', $document))->toBeFalse()
+        ->and($this->admin->can('create', VehicleDocument::class))->toBeTrue()
+        ->and($this->admin->can('update', $document))->toBeTrue()
+        ->and($this->admin->can('delete', $document))->toBeTrue();
 });
 
 it('restricts user administration to admins entirely', function () {

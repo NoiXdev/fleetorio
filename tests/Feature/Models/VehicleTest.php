@@ -8,7 +8,9 @@ use App\Models\FuelCard;
 use App\Models\LeasingCompany;
 use App\Models\Vehicle;
 use App\Models\VehicleAppointment;
+use App\Models\VehicleDocument;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Storage;
 
 it('sums annual total cost from lease rate, tax and insurance', function () {
     $vehicle = Vehicle::factory()->create([
@@ -305,4 +307,28 @@ it('deletes a vehicle\'s appointments when the vehicle itself is deleted', funct
     $vehicle->delete();
 
     expect(VehicleAppointment::count())->toBe(0);
+});
+
+it('deletes a vehicle\'s documents and their files when the vehicle itself is deleted', function () {
+    // Anders als bei Terminen reicht die Datenbank-Kaskade (cascadeOnDelete
+    // auf der Migration) hier nicht: sie raeumt nur die Zeilen ab, nicht die
+    // Dateien auf dem privaten Disk (das ist ein reiner DB-Vorgang und loest
+    // VehicleDocument::deleting() nicht aus). Vehicle::booted() loescht die
+    // Dokumente deshalb explizit ueber Eloquent, siehe Kommentar dort.
+    Storage::fake('local');
+
+    $vehicle = Vehicle::factory()->create();
+    $documents = VehicleDocument::factory()->for($vehicle)->count(2)->create();
+
+    foreach ($documents as $document) {
+        Storage::disk('local')->put($document->file_path, 'dummy content');
+    }
+
+    $vehicle->delete();
+
+    expect(VehicleDocument::count())->toBe(0);
+
+    foreach ($documents as $document) {
+        expect(Storage::disk('local')->exists($document->file_path))->toBeFalse();
+    }
 });

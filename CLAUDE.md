@@ -47,6 +47,10 @@ Feldnamen ab.
   Wer Route oder Controller ändert, muss diese Prüfung für GET und POST einzeln erhalten
   (inklusive der `lockForUpdate()`-Transaktion gegen das Wettrennen zweier gleichzeitiger
   Anfragen) und darf sie nicht versehentlich auf eine einzige Stelle zusammenziehen.
+- **Fahrzeugdokumente** (Fahrzeugschein u. a., `VehicleDocument`) liegen auf dem privaten Disk
+  (`storage/app/private`) und dürfen ausschließlich über den autorisierten
+  `VehicleDocumentDownloadController` ausgeliefert werden — kein `Storage::url()`, kein
+  `public/storage`-Symlink, keine signierte URL.
 
 ## Dokumentation
 

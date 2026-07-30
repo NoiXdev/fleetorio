@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\SetupController;
+use App\Http\Controllers\VehicleDocumentDownloadController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
@@ -26,3 +27,24 @@ Route::get('/setup', [SetupController::class, 'show'])->name('setup.show');
 Route::post('/setup', [SetupController::class, 'store'])
     ->middleware('throttle:5,1')
     ->name('setup.store');
+
+/*
+ * Laravels Standard-'auth'-Middleware faellt bei einem nicht angemeldeten
+ * Aufruf auf route('login') zurueck (Illuminate\Foundation\Exceptions\Handler
+ * ::unauthenticated()) - ohne diese benannte Route wuerde das mit einer
+ * RouteNotFoundException statt einer sauberen Weiterleitung enden. Das Panel
+ * selbst kennt nur 'filament.admin.auth.login'; diese Route bildet den
+ * generischen Namen 'login' schlicht darauf ab.
+ */
+Route::redirect('/login', '/admin/login')->name('login');
+
+/*
+ * Einziger Weg, eine Dokumentdatei auszuliefern - siehe Kommentar am
+ * Controller. 'auth' (Guard 'web', siehe config/auth.php) ist derselbe
+ * Session-Guard, den auch das Filament-Panel verwendet: ein Aufruf ohne
+ * Anmeldung wird hier zur Login-Seite umgeleitet (302), bevor der Controller
+ * ueberhaupt laeuft.
+ */
+Route::get('/vehicle-documents/{vehicleDocument}/download', VehicleDocumentDownloadController::class)
+    ->middleware('auth')
+    ->name('vehicle-documents.download');

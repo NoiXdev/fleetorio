@@ -112,6 +112,27 @@ class Vehicle extends Model
     }
 
     /**
+     * Neueste zuerst, wie appointments() oben.
+     */
+    public function documents(): HasMany
+    {
+        return $this->hasMany(VehicleDocument::class)->orderByDesc('created_at');
+    }
+
+    protected static function booted(): void
+    {
+        // Die Datenbankzeilen der Dokumente raeumt cascadeOnDelete() auf der
+        // Migration ab - das ist aber ein reiner DB-Vorgang und loest
+        // VehicleDocument::deleting() (Loeschen der Datei) nicht aus. Deshalb
+        // hier explizit ueber Eloquent loeschen, damit die Dateien auf dem
+        // privaten Disk mitgehen und nicht als verwaiste, personenbezogene
+        // Daten liegen bleiben.
+        static::deleting(function (Vehicle $vehicle): void {
+            $vehicle->documents->each->delete();
+        });
+    }
+
+    /**
      * Der decimal-Cast liefert Strings, daher die explizite float-Umwandlung.
      */
     protected function annualTotalCost(): Attribute
