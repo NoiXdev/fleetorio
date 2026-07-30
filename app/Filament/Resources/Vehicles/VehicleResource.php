@@ -13,6 +13,7 @@ use App\Filament\Resources\Vehicles\Schemas\VehicleInfolist;
 use App\Filament\Resources\Vehicles\Tables\VehiclesTable;
 use App\Models\Vehicle;
 use BackedEnum;
+use Filament\Resources\RelationManagers\RelationGroup;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -50,11 +51,25 @@ class VehicleResource extends Resource
         return VehiclesTable::configure($table);
     }
 
+    /**
+     * Dokumente und Termine sollen laut Spezifikation untereinander stehen,
+     * nicht als Tabs. Filament rendert automatisch Tabs, sobald mehr als ein
+     * Eintrag in diesem Array steht (siehe Filament\Resources\Pages\Concerns\
+     * HasRelationManagers::getRelationManagersContentComponent(), Bedingung
+     * "count($managers) > 1"). Eine einzelne RelationGroup zaehlt hier als
+     * genau ein Eintrag: faellt man in den nicht-tabbed Zweig derselben
+     * Methode, wird eine RelationGroup ueber Group::make(...) aufgeloest -
+     * ihre enthaltenen Relation Manager erscheinen dadurch einfach
+     * nacheinander, ohne eigene Tab-Navigation. Die Reihenfolge hier
+     * (Dokumente vor Terminen) legt die Anzeigereihenfolge fest.
+     */
     public static function getRelations(): array
     {
         return [
-            VehicleAppointmentsRelationManager::class,
-            VehicleDocumentsRelationManager::class,
+            RelationGroup::make('Dokumente & Termine', [
+                VehicleDocumentsRelationManager::class,
+                VehicleAppointmentsRelationManager::class,
+            ]),
         ];
     }
 

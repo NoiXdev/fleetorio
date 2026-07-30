@@ -4,9 +4,11 @@ use App\Filament\Resources\Vehicles\Pages\EditVehicle;
 use App\Filament\Resources\Vehicles\Pages\ListVehicles;
 use App\Filament\Resources\Vehicles\Pages\ViewVehicle;
 use App\Filament\Resources\Vehicles\RelationManagers\VehicleAppointmentsRelationManager;
+use App\Filament\Resources\Vehicles\RelationManagers\VehicleDocumentsRelationManager;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleAppointment;
+use App\Models\VehicleDocument;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -208,5 +210,54 @@ describe('appointment history on the view page', function () {
             'ownerRecord' => $vehicle,
             'pageClass' => ViewVehicle::class,
         ])->assertTableColumnHidden('cost');
+    });
+});
+
+describe('documents and appointments stacked instead of tabbed', function () {
+    // Auftraggeber-Wunsch: Dokumente und Termine sollen untereinander
+    // erscheinen statt in Tabs (siehe VehicleResource::getRelations(), eine
+    // RelationGroup statt zwei einzelner Eintraege). Ohne diese Gruppierung
+    // wuerde Filament automatisch Tabs rendern, sobald mehr als ein Relation
+    // Manager registriert ist (count($managers) > 1), und nur der aktive Tab
+    // wuerde sein Livewire-Kind mounten.
+    it('shows both relation managers at once on the view page', function () {
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        $vehicle = Vehicle::factory()->create();
+
+        livewire(ViewVehicle::class, ['record' => $vehicle->id])
+            ->assertOk()
+            ->assertSeeLivewire(VehicleDocumentsRelationManager::class)
+            ->assertSeeLivewire(VehicleAppointmentsRelationManager::class);
+    });
+
+    it('shows both relation managers at once on the edit page', function () {
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        $vehicle = Vehicle::factory()->create();
+
+        livewire(EditVehicle::class, ['record' => $vehicle->id])
+            ->assertOk()
+            ->assertSeeLivewire(VehicleDocumentsRelationManager::class)
+            ->assertSeeLivewire(VehicleAppointmentsRelationManager::class);
+    });
+
+    it('renders both lists with their content immediately, not lazily, on the view page', function () {
+        // Belegt nicht nur, dass beide Livewire-Kinder gemountet werden
+        // (assertSeeLivewire oben), sondern dass ihr tatsaechlicher Inhalt
+        // (Tabellenueberschrift, Datensatz) direkt in der Erstauslieferung
+        // steht - siehe VehicleDocumentsRelationManager::$isLazy /
+        // VehicleAppointmentsRelationManager::$isLazy.
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        $vehicle = Vehicle::factory()->create();
+        VehicleDocument::factory()->for($vehicle)->create(['title' => 'Fahrzeugschein Original']);
+        VehicleAppointment::factory()->for($vehicle)->create();
+
+        $html = livewire(ViewVehicle::class, ['record' => $vehicle->id])->html();
+
+        expect($html)->toContain('Dokumente')
+            ->toContain('Termine')
+            ->toContain('Fahrzeugschein Original');
     });
 });

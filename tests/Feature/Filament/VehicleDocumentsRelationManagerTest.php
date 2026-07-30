@@ -22,15 +22,12 @@ it('shows the documents relation manager on the vehicle edit page', function () 
 
     $vehicle = Vehicle::factory()->create();
 
-    // Zwei Relation Manager (Termine, Dokumente) werden als Tabs gerendert;
-    // nur der aktive Tab (standardmaessig der erste, "Termine") mountet
-    // sein Livewire-Kind sofort - assertSeeLivewire() auf den zweiten Tab
-    // liesse sich zuverlaessig nur nach einem echten Tab-Wechsel pruefen,
-    // und das testet die Livewire-Testinfrastruktur selbst, nicht unseren
-    // Code. Die Tab-Beschriftung "Dokumente" steht dagegen unabhaengig vom
-    // aktiven Tab immer in der Navigation (siehe Filament\Schemas\
-    // Components\Tabs, die Buttons aller Tabs werden immer gerendert) - das
-    // genuegt, um zu belegen, dass der Relation Manager registriert ist.
+    // Dokumente und Termine stehen untereinander statt in Tabs (siehe
+    // VehicleResource::getRelations(), eine RelationGroup statt zwei
+    // einzelner Eintraege) und sind beide nicht lazy (siehe
+    // VehicleDocumentsRelationManager::$isLazy) - "Dokumente" steht daher
+    // als Tabellenueberschrift direkt in der Erstauslieferung, unabhaengig
+    // von einem aktiven Tab (den es hier gar nicht mehr gibt).
     livewire(EditVehicle::class, ['record' => $vehicle->id])
         ->assertOk()
         ->assertSee('Dokumente');

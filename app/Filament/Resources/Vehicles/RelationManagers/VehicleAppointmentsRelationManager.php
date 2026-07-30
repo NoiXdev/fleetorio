@@ -27,6 +27,13 @@ class VehicleAppointmentsRelationManager extends RelationManager
 
     protected static ?string $title = 'Termine';
 
+    /**
+     * Siehe Kommentar an VehicleDocumentsRelationManager::$isLazy - dasselbe
+     * gilt hier: beide Listen sollen sofort untereinander erscheinen, nicht
+     * erst per Intersection-Observer nachgeladen werden.
+     */
+    protected static bool $isLazy = false;
+
     public function form(Schema $schema): Schema
     {
         return $schema

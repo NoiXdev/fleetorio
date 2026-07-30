@@ -40,6 +40,18 @@ class VehicleDocumentsRelationManager extends RelationManager
     protected static ?string $title = 'Dokumente';
 
     /**
+     * RelationManager ist per CanBeLazy (Filament\Support\Concerns\CanBeLazy,
+     * $isLazy-Property) standardmaessig lazy: der Livewire-Kind wird erst per
+     * Intersection-Observer (x-intersect) nachgeladen. Das war bislang
+     * unauffaellig, weil nur der aktive Tab ueberhaupt sichtbar war. Seit
+     * Dokumente und Termine untereinander stehen (siehe
+     * VehicleResource::getRelations(), RelationGroup statt zwei einzelner
+     * Eintraege), sollen beide Listen sofort mitsamt Inhalt erscheinen, ohne
+     * auf das Einblenden im Viewport zu warten.
+     */
+    protected static bool $isLazy = false;
+
+    /**
      * Erlaubte Dateitypen und Groessenobergrenze fuer Fahrzeugdokumente
      * (Fahrzeugschein, Leasingvertrag, Uebergabeprotokoll, HU-Bericht,
      * Versicherungsschein, Sonstiges): PDF fuer Vertragsdokumente und
