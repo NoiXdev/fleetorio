@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Dealerships\Tables;
 
 use App\Filament\Actions\GuardedDeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -31,6 +32,7 @@ class DealershipsTable
             ])
             ->defaultSort('name')
             ->recordActions([
+                ViewAction::make(),
                 EditAction::make(),
                 GuardedDeleteAction::make(),
             ]);

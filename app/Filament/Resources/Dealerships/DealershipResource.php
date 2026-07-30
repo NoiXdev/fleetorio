@@ -5,7 +5,9 @@ namespace App\Filament\Resources\Dealerships;
 use App\Filament\Resources\Dealerships\Pages\CreateDealership;
 use App\Filament\Resources\Dealerships\Pages\EditDealership;
 use App\Filament\Resources\Dealerships\Pages\ListDealerships;
+use App\Filament\Resources\Dealerships\Pages\ViewDealership;
 use App\Filament\Resources\Dealerships\Schemas\DealershipForm;
+use App\Filament\Resources\Dealerships\Schemas\DealershipInfolist;
 use App\Filament\Resources\Dealerships\Tables\DealershipsTable;
 use App\Models\Dealership;
 use BackedEnum;
@@ -34,6 +36,11 @@ class DealershipResource extends Resource
         return DealershipForm::configure($schema);
     }
 
+    public static function infolist(Schema $schema): Schema
+    {
+        return DealershipInfolist::configure($schema);
+    }
+
     public static function table(Table $table): Table
     {
         return DealershipsTable::configure($table);
@@ -51,6 +58,7 @@ class DealershipResource extends Resource
         return [
             'index' => ListDealerships::route('/'),
             'create' => CreateDealership::route('/create'),
+            'view' => ViewDealership::route('/{record}'),
             'edit' => EditDealership::route('/{record}/edit'),
         ];
     }
