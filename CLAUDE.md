@@ -61,4 +61,6 @@ Feldnamen ab.
 ## Dokumentation
 
 Fachliche Entscheidungen stehen in `docs/superpowers/specs/`, der Umsetzungsweg in
-`docs/superpowers/plans/`. Betrieb und Einrichtung: `README.md`.
+`docs/superpowers/plans/`. Betrieb und Einrichtung: `README.md`. Besprochene, aber bewusst
+zurückgestellte Ideen samt ihrer Fallstricke: `docs/backlog.md` — dort nachsehen, bevor ein
+neues Feature von Null geplant wird.
