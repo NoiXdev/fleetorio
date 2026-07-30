@@ -186,3 +186,67 @@ it('falls back to the default logo again once the logo is removed', function () 
     expect(AppSetting::hasCustomLogo())->toBeFalse()
         ->and(AppSetting::logoUrl())->toBe(asset('images/fleetorio-logo.svg'));
 });
+
+describe('colour notations', function () {
+    // Die frueheren strengen Regeln wiesen naheliegende Eingaben mit einer
+    // Fehlermeldung ab - das war der vom Auftraggeber gemeldete Fehler beim
+    // Aendern der Farbe. Jetzt wird normalisiert, was eindeutig gemeint ist.
+    it('accepts a hex colour written without the leading hash', function () {
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        livewire(AppearanceSettings::class)
+            ->fillForm(['brand_name' => 'T', 'primary_color' => 'bb0000'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        expect(AppSetting::query()->first()->primary_color)->toBe('#bb0000');
+    });
+
+    it('expands the three digit short form the way css does', function () {
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        livewire(AppearanceSettings::class)
+            ->fillForm(['brand_name' => 'T', 'primary_color' => '#fff'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        expect(AppSetting::query()->first()->primary_color)->toBe('#ffffff');
+    });
+
+    it('tolerates uppercase and surrounding whitespace', function () {
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        livewire(AppearanceSettings::class)
+            ->fillForm(['brand_name' => 'T', 'primary_color' => '  #BB0000 '])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        expect(AppSetting::query()->first()->primary_color)->toBe('#bb0000');
+    });
+
+    it('still rejects something that is not a colour at all', function () {
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        livewire(AppearanceSettings::class)
+            ->fillForm(['brand_name' => 'T', 'primary_color' => 'unfug'])
+            ->call('save')
+            ->assertHasFormErrors(['primary_color']);
+
+        expect(AppSetting::query()->count())->toBe(0);
+    });
+
+    // Ohne Rueckfall lieferte buildPalette() bei unbrauchbaren Eingaben keinen
+    // Fehler, sondern falsche Werte: "#fff" ergab ein Rot statt Weiss. Ein
+    // stiller Fehler ist schlimmer als ein laut scheiternder.
+    it('falls back to the default colour instead of producing a wrong palette', function () {
+        $fromGarbage = AppSetting::buildPalette('unfug');
+        $fromDefault = AppSetting::buildPalette(AppSetting::DEFAULT_COLOR);
+
+        expect($fromGarbage)->toBe($fromDefault);
+    });
+
+    it('builds the same palette regardless of how the colour was written', function () {
+        expect(AppSetting::buildPalette('bb0000'))
+            ->toBe(AppSetting::buildPalette('#BB0000'));
+    });
+});

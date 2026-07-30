@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Models\AppSetting;
 use App\Rules\RejectsUnsafeSvg;
 use BackedEnum;
+use Closure;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
@@ -94,10 +95,20 @@ class AppearanceSettings extends Page implements HasSchemas
                 ColorPicker::make('primary_color')
                     ->label('Primärfarbe')
                     ->required()
-                    ->rule('regex:/^#[0-9a-fA-F]{6}$/')
-                    ->validationMessages([
-                        'regex' => 'Bitte eine gültige Hex-Farbe angeben, z. B. #2563eb.',
-                    ]),
+                    // Eingaben werden normalisiert, nicht abgelehnt: "bb0000"
+                    // ohne Raute, die Kurzform "#fff" oder ein versehentliches
+                    // Leerzeichen meinen offensichtlich eine Farbe. Die frühere
+                    // strenge Prüfung wies genau das mit einer Fehlermeldung ab.
+                    // Erst wenn nach dem Normalisieren keine Farbe übrig bleibt,
+                    // greift die Regel und meldet es.
+                    ->dehydrateStateUsing(fn (?string $state): ?string => AppSetting::normalizeColor($state) ?? $state)
+                    ->rule(function (): Closure {
+                        return function (string $attribute, mixed $value, Closure $fail): void {
+                            if (AppSetting::normalizeColor(is_string($value) ? $value : null) === null) {
+                                $fail('Bitte eine Hex-Farbe angeben, z. B. #2563eb oder bb0000.');
+                            }
+                        };
+                    }),
             ])
             ->statePath('data');
     }
@@ -114,7 +125,7 @@ class AppearanceSettings extends Page implements HasSchemas
         $setting = AppSetting::query()->find(AppSetting::SINGLETON_ID);
 
         if (! $setting) {
-            $setting = new AppSetting();
+            $setting = new AppSetting;
             $setting->id = AppSetting::SINGLETON_ID;
         }
 

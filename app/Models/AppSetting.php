@@ -169,8 +169,38 @@ class AppSetting extends Model
      *
      * @return array<int, string>
      */
+    /**
+     * Bringt gaengige Schreibweisen einer Hex-Farbe auf die Form "#rrggbb"
+     * oder gibt null zurueck, wenn daraus keine Farbe zu machen ist.
+     *
+     * Absicht: Wer "bb0000" ohne Raute, "#FFF" als Kurzform oder mit einem
+     * versehentlichen Leerzeichen eintraegt, meint offensichtlich eine Farbe.
+     * Das abzulehnen ist unfreundlich, wenn die Absicht eindeutig ist - und
+     * war die Ursache der Fehlermeldung beim Speichern der Primaerfarbe.
+     */
+    public static function normalizeColor(?string $value): ?string
+    {
+        $value = strtolower(trim((string) $value));
+        $value = ltrim($value, '#');
+
+        // Kurzform verdoppeln: "abc" -> "aabbcc" (so wie CSS es auch liest).
+        if (preg_match('/^[0-9a-f]{3}$/', $value)) {
+            $value = $value[0].$value[0].$value[1].$value[1].$value[2].$value[2];
+        }
+
+        return preg_match('/^[0-9a-f]{6}$/', $value) ? '#'.$value : null;
+    }
+
     public static function buildPalette(string $hex): array
     {
+        // Unbrauchbare Eingaben nicht stillschweigend durchlassen: Filaments
+        // convertToOklch() wirft dabei keine Ausnahme, sondern liefert falsche
+        // Werte - "#fff" ergibt ein Rot, "bb0000" ohne Raute ein Schwarz. Ohne
+        // diesen Rueckfall stellte man sich damit unbemerkt eine falsche Farbe
+        // ein. normalizeColor() faengt die ueblichen Schreibweisen ab; bleibt
+        // danach etwas Ungueltiges uebrig, gilt der Standardwert.
+        $hex = static::normalizeColor($hex) ?? static::DEFAULT_COLOR;
+
         $inputOklch = Color::convertToOklch($hex);
         [$inputLightness, $inputChroma, $hue] = sscanf($inputOklch, 'oklch(%f %f %f)');
 
