@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\AppointmentType;
-use App\Enums\FuelCardProvider;
 use App\Enums\FuelType;
 use App\Enums\UserRole;
 use App\Enums\VehicleStatus;
@@ -26,12 +25,6 @@ it('provides labels and colours for vehicle status', function () {
         ->and(VehicleStatus::Retired->getLabel())->toBe('Ausgemustert')
         ->and(VehicleStatus::Active->getColor())->toBe('success')
         ->and(VehicleStatus::Retired->getColor())->toBe('gray');
-});
-
-it('provides labels for fuel card providers', function () {
-    expect(FuelCardProvider::Dkv->getLabel())->toBe('DKV')
-        ->and(FuelCardProvider::Elli->getLabel())->toBe('Elli')
-        ->and(FuelCardProvider::Other->getLabel())->toBe('Sonstige');
 });
 
 it('provides labels for user roles', function () {

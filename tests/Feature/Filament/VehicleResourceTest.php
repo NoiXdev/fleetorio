@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\FuelCardProvider;
 use App\Enums\FuelType;
 use App\Enums\VehicleStatus;
 use App\Filament\Exports\VehicleExporter;
@@ -10,6 +9,7 @@ use App\Filament\Resources\Vehicles\Pages\ListVehicles;
 use App\Models\Dealership;
 use App\Models\Employee;
 use App\Models\FuelCard;
+use App\Models\FuelCardProvider;
 use App\Models\User;
 use App\Models\Vehicle;
 use Filament\Actions\CreateAction;
@@ -312,8 +312,11 @@ it('labels the fuel card option with provider and full card number', function ()
     // nicht raten muss.
     actingAs(User::factory()->admin()->withTwoFactor()->create());
 
+    // "DKV" ist einer der Startwerte aus der Migration
+    // 2026_07_30_180000_create_fuel_card_providers_table, kein eigens
+    // angelegter Anbieter - der Name ist damit in jedem Testlauf eindeutig.
     FuelCard::factory()->create([
-        'provider' => FuelCardProvider::Dkv,
+        'fuel_card_provider_id' => FuelCardProvider::where('name', 'DKV')->value('id'),
         'card_number' => '7080123456789',
     ]);
 
@@ -827,5 +830,33 @@ describe('the button row on the edit page', function () {
         expect($action->isOutlined())->toBeTrue()
             ->and($action->getColor())->toBe('danger')
             ->and($action->isConfirmationRequired())->toBeTrue();
+    });
+});
+
+describe('searching by driver name', function () {
+    it('finds a vehicle in the list by searching the driver last name', function () {
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        $employee = Employee::factory()->create(['first_name' => 'Annastasia', 'last_name' => 'Beispielmann']);
+        $vehicle = Vehicle::factory()->for($employee)->create();
+        $other = Vehicle::factory()->create();
+
+        livewire(ListVehicles::class)
+            ->searchTable('Beispielmann')
+            ->assertCanSeeTableRecords([$vehicle])
+            ->assertCanNotSeeTableRecords([$other]);
+    });
+
+    it('finds a vehicle in the list by searching the driver first name', function () {
+        actingAs(User::factory()->admin()->withTwoFactor()->create());
+
+        $employee = Employee::factory()->create(['first_name' => 'Annastasia', 'last_name' => 'Beispielmann']);
+        $vehicle = Vehicle::factory()->for($employee)->create();
+        $other = Vehicle::factory()->create();
+
+        livewire(ListVehicles::class)
+            ->searchTable('Annastasia')
+            ->assertCanSeeTableRecords([$vehicle])
+            ->assertCanNotSeeTableRecords([$other]);
     });
 });

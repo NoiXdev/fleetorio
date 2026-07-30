@@ -93,9 +93,9 @@ class VehicleForm
                         // Anbieter + volle Nummer (Auftraggeber-Entscheidung),
                         // damit man bei mehreren Anbietern nicht raten muss.
                         // Der encrypted-Cast schuetzt weiterhin die Datenbank.
-                        ->relationship('fuelCard', 'card_number')
+                        ->relationship('fuelCard', 'card_number', fn ($query) => $query->with('fuelCardProvider'))
                         ->getOptionLabelFromRecordUsing(
-                            fn ($record): string => "{$record->provider->getLabel()} {$record->card_number}"
+                            fn ($record): string => "{$record->fuelCardProvider->name} {$record->card_number}"
                         )
                         ->placeholder('Auswählen')
                         ->preload(),

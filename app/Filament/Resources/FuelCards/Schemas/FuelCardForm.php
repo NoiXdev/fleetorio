@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\FuelCards\Schemas;
 
-use App\Enums\FuelCardProvider;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -15,10 +14,13 @@ class FuelCardForm
     {
         return $schema
             ->components([
-                Select::make('provider')
+                Select::make('fuel_card_provider_id')
                     ->label('Anbieter')
-                    ->options(FuelCardProvider::class)
+                    ->relationship('fuelCardProvider', 'name')
                     ->native(false)
+                    ->searchable()
+                    ->preload()
+                    ->placeholder('Auswählen')
                     ->required(),
                 TextInput::make('card_number')
                     ->label('Kartennummer')

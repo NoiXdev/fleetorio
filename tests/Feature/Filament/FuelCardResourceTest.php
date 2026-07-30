@@ -1,11 +1,11 @@
 <?php
 
-use App\Enums\FuelCardProvider;
 use App\Filament\Actions\GuardedDeleteAction;
 use App\Filament\Resources\FuelCards\Pages\CreateFuelCard;
 use App\Filament\Resources\FuelCards\Pages\EditFuelCard;
 use App\Filament\Resources\FuelCards\Pages\ListFuelCards;
 use App\Models\FuelCard;
+use App\Models\FuelCardProvider;
 use App\Models\User;
 use App\Models\Vehicle;
 
@@ -26,9 +26,11 @@ it('lists fuel cards', function () {
 });
 
 it('creates a fuel card and stores the number encrypted', function () {
+    $provider = FuelCardProvider::factory()->create();
+
     livewire(CreateFuelCard::class)
         ->fillForm([
-            'provider' => FuelCardProvider::Dkv->value,
+            'fuel_card_provider_id' => $provider->id,
             'card_number' => '7080999888777',
         ])
         ->call('create')
@@ -43,17 +45,17 @@ it('creates a fuel card and stores the number encrypted', function () {
 
 it('requires provider and card number', function () {
     livewire(CreateFuelCard::class)
-        ->fillForm(['provider' => null, 'card_number' => null])
+        ->fillForm(['fuel_card_provider_id' => null, 'card_number' => null])
         ->call('create')
-        ->assertHasFormErrors(['provider' => 'required', 'card_number' => 'required']);
+        ->assertHasFormErrors(['fuel_card_provider_id' => 'required', 'card_number' => 'required']);
 });
 
 it('filters by provider', function () {
-    $dkv = FuelCard::factory()->create(['provider' => FuelCardProvider::Dkv]);
-    $elli = FuelCard::factory()->create(['provider' => FuelCardProvider::Elli]);
+    $dkv = FuelCard::factory()->create(['fuel_card_provider_id' => FuelCardProvider::where('name', 'DKV')->value('id')]);
+    $elli = FuelCard::factory()->create(['fuel_card_provider_id' => FuelCardProvider::where('name', 'Elli')->value('id')]);
 
     livewire(ListFuelCards::class)
-        ->filterTable('provider', FuelCardProvider::Dkv->value)
+        ->filterTable('fuel_card_provider_id', FuelCardProvider::where('name', 'DKV')->value('id'))
         ->assertCanSeeTableRecords([$dkv])
         ->assertCanNotSeeTableRecords([$elli]);
 });
@@ -64,13 +66,21 @@ it('shows the full card number in the list', function () {
     // ohnehin nur angemeldeten Nutzern zugaenglich; der encrypted-Cast am
     // Model schuetzt weiterhin die Datenbank, nicht die Anzeige.
     $card = FuelCard::factory()->create([
-        'provider' => FuelCardProvider::Dkv,
         'card_number' => '7080999886789',
     ]);
 
     livewire(ListFuelCards::class)
         ->assertOk()
         ->assertSee('7080999886789');
+});
+
+it('shows the provider name in the list', function () {
+    $provider = FuelCardProvider::factory()->create(['name' => 'Testanbieter']);
+    FuelCard::factory()->create(['fuel_card_provider_id' => $provider->id]);
+
+    livewire(ListFuelCards::class)
+        ->assertOk()
+        ->assertSee('Testanbieter');
 });
 
 it('refuses to delete a card that is still assigned', function () {

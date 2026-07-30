@@ -68,7 +68,7 @@ class VehicleInfolist
                         ->label('Tankkarte')
                         ->state(fn (Vehicle $record): ?string => $record->fuelCard === null
                             ? null
-                            : "{$record->fuelCard->provider->getLabel()} {$record->fuelCard->card_number}")
+                            : "{$record->fuelCard->fuelCardProvider->name} {$record->fuelCard->card_number}")
                         ->placeholder('—'),
                 ]),
 

@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\FuelCards\Tables;
 
-use App\Enums\FuelCardProvider;
 use App\Filament\Actions\GuardedDeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
@@ -16,7 +15,7 @@ class FuelCardsTable
     {
         return $table
             ->columns([
-                TextColumn::make('provider')
+                TextColumn::make('fuelCardProvider.name')
                     ->label('Anbieter')
                     ->badge()
                     ->sortable(),
@@ -36,9 +35,9 @@ class FuelCardsTable
                     ->counts('vehicles'),
             ])
             ->filters([
-                SelectFilter::make('provider')
+                SelectFilter::make('fuel_card_provider_id')
                     ->label('Anbieter')
-                    ->options(FuelCardProvider::class),
+                    ->relationship('fuelCardProvider', 'name'),
             ])
             ->recordActions([
                 ViewAction::make(),

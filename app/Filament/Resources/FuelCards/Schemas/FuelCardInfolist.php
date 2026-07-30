@@ -26,7 +26,7 @@ class FuelCardInfolist
                 Section::make('Tankkarte')
                     ->columns(2)
                     ->schema([
-                        TextEntry::make('provider')
+                        TextEntry::make('fuelCardProvider.name')
                             ->label('Anbieter')
                             ->badge(),
                         TextEntry::make('card_number')

@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Enums\FuelCardProvider;
 use App\Models\FuelCard;
+use App\Models\FuelCardProvider;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -19,7 +19,7 @@ class FuelCardFactory extends Factory
     public function definition(): array
     {
         return [
-            'provider' => fake()->randomElement(FuelCardProvider::cases()),
+            'fuel_card_provider_id' => FuelCardProvider::factory(),
             'card_number' => (string) fake()->numerify('708#########'),
             'valid_until' => fake()->dateTimeBetween('+1 year', '+4 years'),
             'notes' => null,

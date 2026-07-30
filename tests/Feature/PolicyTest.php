@@ -3,6 +3,7 @@
 use App\Models\Dealership;
 use App\Models\Employee;
 use App\Models\FuelCard;
+use App\Models\FuelCardProvider;
 use App\Models\LeasingCompany;
 use App\Models\User;
 use App\Models\Vehicle;
@@ -47,6 +48,7 @@ it('applies the same rule to master data', function (string $model) {
 })->with([
     Employee::class,
     FuelCard::class,
+    FuelCardProvider::class,
     LeasingCompany::class,
     Dealership::class,
 ]);
