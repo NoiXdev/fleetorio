@@ -8,6 +8,53 @@ benutzbar.
 
 ---
 
+## Fahrer-Zugänge mit Einreichungen
+
+**Warum:** Wer ein Fahrzeug fährt, merkt einen Schaden oder einen Werkstattbesuch zuerst. Bisher
+muss er es dem Verwalter sagen, der es dann einträgt. Fahrer sollen selbst melden können, und der
+Verwalter prüft, übernimmt, bearbeitet oder lehnt ab.
+
+**Was dazugehört:**
+
+- Fahrer melden Ereignisse zu **ihrem** Fahrzeug: Schäden, Werkstattbesuche, Service — also das,
+  was heute nur ein Verwalter als Termin einträgt.
+- Eingereichte Meldungen sind zunächst Vorschläge, keine Termine. Der Verwalter sieht eine Liste
+  offener Einreichungen und entscheidet je Eintrag.
+- Fahrer sehen ausschließlich die Historie ihres eigenen Fahrzeugs.
+
+**Vier Entscheidungen, die die Umsetzung völlig verschieden ausfallen lassen** — vor dem Bauen
+klären:
+
+1. **Mitarbeiter und Benutzerkonten sind in dieser Anwendung bewusst getrennt** (siehe die
+   Begründung in der Spezifikation: ein Mitarbeiter mit Dienstwagen brauchte keinen Zugang, ein
+   Buchhaltungskonto fährt kein Auto). Für Fahrer-Zugänge müssen beide zusammenfinden — als
+   Verknüpfung (`employees.user_id`) oder durch Zusammenlegen. Die Verknüpfung ist der kleinere
+   Eingriff und erhält die Trennung für alle, die keinen Zugang brauchen.
+2. **Eigener Bereich oder dasselbe Panel mit eingeschränkter Sicht?** Ein Fahrer, der nur Schäden
+   meldet, braucht keine Navigation mit sechs Menüpunkten. Ein zweites, sehr einfaches Panel ist
+   mehr Arbeit, aber für die Zielgruppe deutlich besser. Filament kann mehrere Panels.
+3. **Was genau darf eingereicht werden?** Nur Termine und Schäden, oder auch Kilometerstände und
+   Dateien (Foto vom Schaden)? Dateien bedeuten Upload-Rechte für Fahrer — dann gilt für sie
+   dasselbe wie für Dokumente: privater Speicher, autorisierte Auslieferung.
+4. **Wie kommen Fahrer an ihren Zugang?** Der Verwalter legt Passwörter an, oder es gibt eine
+   Einladung per E-Mail. Letzteres ist angenehmer, setzt aber echten Mailversand voraus (siehe
+   `README.md`, Abschnitt zum Betrieb).
+
+**Der Fallstrick, an dem so etwas scheitert:** „Fahrer sieht nur sein Fahrzeug" ist eine
+Autorisierungsanforderung, keine Anzeigefrage. Es genügt **nicht**, die Liste zu filtern — sonst
+erreicht ein Fahrer ein fremdes Fahrzeug, indem er die Adresse abändert. Die Prüfung muss in der
+Policy sitzen und für jeden Zugriff gelten, auch für Dokumente, Bilder und Termine des Fahrzeugs.
+Diese Anwendung hat für genau dieses Muster schon Vorbilder: die Kostensichtbarkeit und den
+Dokument-Download. Und sie braucht Tests, die den direkten Zugriff prüfen, nicht nur die
+Sichtbarkeit.
+
+**Zweiter Fallstrick:** Ein Fahrer wechselt das Fahrzeug. Dann darf er die Historie seines alten
+Fahrzeugs vermutlich nicht mehr sehen — oder doch, für den Zeitraum, in dem er es gefahren hat?
+Das hängt an der zurückgestellten Fahrer-Historie weiter unten und sollte zusammen entschieden
+werden.
+
+---
+
 ## Kilometerstände und Leasing-Limit
 
 **Warum:** Leasingverträge haben Kilometerbegrenzungen, und Überschreitung kostet pro Kilometer.
