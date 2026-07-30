@@ -44,11 +44,17 @@ Route::redirect('/login', '/admin/login')->name('login');
  * Controller. 'auth' (Guard 'web', siehe config/auth.php) ist derselbe
  * Session-Guard, den auch das Filament-Panel verwendet: ein Aufruf ohne
  * Anmeldung wird hier zur Login-Seite umgeleitet (302), bevor der Controller
- * ueberhaupt laeuft.
+ * ueberhaupt laeuft. Zwei Routen auf denselben Controller: /download erzwingt
+ * den Speichern-Dialog, /view liefert dieselbe Datei inline fuer die
+ * "Ansehen"-Aktion im VehicleDocumentsRelationManager.
  */
-Route::get('/vehicle-documents/{vehicleDocument}/download', VehicleDocumentDownloadController::class)
+Route::get('/vehicle-documents/{vehicleDocument}/download', [VehicleDocumentDownloadController::class, 'download'])
     ->middleware('auth')
     ->name('vehicle-documents.download');
+
+Route::get('/vehicle-documents/{vehicleDocument}/view', [VehicleDocumentDownloadController::class, 'view'])
+    ->middleware('auth')
+    ->name('vehicle-documents.view');
 
 /*
  * Einziger Weg, ein Fahrzeugbild auszuliefern - siehe Kommentar am

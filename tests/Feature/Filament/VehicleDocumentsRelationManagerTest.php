@@ -165,6 +165,58 @@ it('keeps the download action visible to a read-only user', function () {
         ->assertTableActionHasUrl('download', route('vehicle-documents.download', $document), $document);
 });
 
+it('keeps the view action visible and mountable for a read-only user', function () {
+    // Dasselbe Muster wie "download" oben: "Ansehen" ist ebenfalls eine
+    // generische Action ohne eigene Policy-Bindung. mountTableAction() wirft
+    // bereits, wenn die Aktion nicht sichtbar/mountbar waere (siehe
+    // assertActionVisible() innerhalb von callAction/mountAction) - kommen
+    // wir hier an, ist beides belegt.
+    actingAs(User::factory()->viewer()->withTwoFactor()->create());
+
+    $vehicle = Vehicle::factory()->create();
+    $document = VehicleDocument::factory()->for($vehicle)->create(['mime_type' => 'application/pdf']);
+
+    livewire(VehicleDocumentsRelationManager::class, [
+        'ownerRecord' => $vehicle,
+        'pageClass' => EditVehicle::class,
+    ])
+        ->assertTableActionVisible('view', $document)
+        ->mountTableAction('view', $document)
+        ->assertOk();
+});
+
+it('shows an image document as an img tag and a pdf document as an iframe with a new-tab fallback', function () {
+    // Modals rendern in Filament ueber einen zentralen, seitenweiten Slot
+    // (nicht Teil des HTML dieser isolierten RelationManager-Komponente in
+    // einem Test) - deshalb hier direkt am aufgeloesten Table-Actions-Objekt
+    // geprueft statt ueber assertSee() auf dem gerenderten Markup.
+    actingAs(User::factory()->viewer()->withTwoFactor()->create());
+
+    $vehicle = Vehicle::factory()->create();
+    $image = VehicleDocument::factory()->for($vehicle)->create(['mime_type' => 'image/jpeg']);
+    $pdf = VehicleDocument::factory()->for($vehicle)->create(['mime_type' => 'application/pdf']);
+
+    $component = livewire(VehicleDocumentsRelationManager::class, [
+        'ownerRecord' => $vehicle,
+        'pageClass' => EditVehicle::class,
+    ]);
+
+    $imageModalContent = $component->instance()->getTable()->getAction('view')->record($image)->getModalContent()->toHtml();
+
+    expect($imageModalContent)->toContain('<img')
+        ->toContain(route('vehicle-documents.view', $image));
+
+    $pdfAction = $component->instance()->getTable()->getAction('view')->record($pdf);
+    $pdfModalContent = $pdfAction->getModalContent()->toHtml();
+    $pdfFooterActions = array_values($pdfAction->getExtraModalFooterActions());
+
+    expect($pdfModalContent)->toContain('<iframe')
+        ->toContain(route('vehicle-documents.view', $pdf))
+        ->and($pdfFooterActions)->toHaveCount(1)
+        ->and($pdfFooterActions[0]->getLabel())->toBe('Im neuen Tab öffnen')
+        ->and($pdfFooterActions[0]->getUrl())->toBe(route('vehicle-documents.view', $pdf));
+});
+
 describe('write access is restricted to admins', function () {
     it('hides the write actions from a viewer', function () {
         actingAs(User::factory()->viewer()->withTwoFactor()->create());

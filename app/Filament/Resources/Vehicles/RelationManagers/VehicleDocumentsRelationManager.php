@@ -16,9 +16,11 @@ use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\HtmlString;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 /**
@@ -161,6 +163,51 @@ class VehicleDocumentsRelationManager extends RelationManager
                 CreateAction::make(),
             ])
             ->recordActions([
+                // Zeigt die Datei in einem Modal statt sie herunterzuladen -
+                // fuer beide Darstellungen (Bild, PDF) ueber denselben
+                // autorisierten Controller wie "Herunterladen", nur ueber
+                // dessen view()-Methode (Content-Disposition: inline statt
+                // attachment, siehe VehicleDocumentDownloadController). Keine
+                // externe PDF-Bibliothek: ein <iframe> nutzt die eingebaute
+                // PDF-Anzeige des Browsers; da sich die unterscheidet
+                // (manche bieten keine Zoom-/Download-Leiste im iframe),
+                // gibt es zusaetzlich den Knopf "Im neuen Tab öffnen" als
+                // Rueckfalllosung.
+                Action::make('view')
+                    ->label('Ansehen')
+                    ->icon(Heroicon::OutlinedEye)
+                    ->modalHeading(fn (VehicleDocument $record): string => $record->title)
+                    ->modalWidth(Width::FourExtraLarge)
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Schließen')
+                    ->extraModalFooterActions(fn (VehicleDocument $record): array => $record->mime_type === 'application/pdf'
+                        ? [
+                            Action::make('openInNewTab')
+                                ->label('Im neuen Tab öffnen')
+                                ->color('gray')
+                                ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
+                                ->url(fn (): string => route('vehicle-documents.view', $record))
+                                ->openUrlInNewTab(),
+                        ]
+                        : [])
+                    ->modalContent(function (VehicleDocument $record): HtmlString {
+                        $url = route('vehicle-documents.view', $record);
+
+                        // $record->mime_type stammt aus der tatsaechlichen
+                        // Dateipruefung beim Upload (getMimeType(), siehe
+                        // afterStateUpdated() oben), nicht aus dem vom Client
+                        // behaupteten Header - entscheidet hier verlaesslich
+                        // ueber die Darstellung.
+                        if (str_starts_with($record->mime_type, 'image/')) {
+                            return new HtmlString(
+                                '<img src="'.e($url).'" alt="'.e($record->title).'" class="w-full h-auto rounded-lg">'
+                            );
+                        }
+
+                        return new HtmlString(
+                            '<iframe src="'.e($url).'" title="'.e($record->title).'" style="width:100%;height:75vh;border:0;" class="rounded-lg"></iframe>'
+                        );
+                    }),
                 Action::make('download')
                     ->label('Herunterladen')
                     ->icon(Heroicon::OutlinedArrowDownTray)
