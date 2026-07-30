@@ -29,21 +29,25 @@ enum FuelType: string implements HasIcon, HasLabel
     }
 
     /**
-     * Heroicons v2 kennt kein reines "Tropfen"-Symbol (nur die Pipette
-     * o-eye-dropper, die eher an ein Werkzeug erinnert) - deshalb Feuer fuer
-     * beide Verbrenner-Antriebsarten, sachlich passend zur Verbrennung.
-     * Blitz fuer Elektro ist die naheliegende Wahl. Fuer Hybrid und
-     * Plug-in-Hybrid steht "zwei Pfeile, die die Richtung tauschen"
-     * (arrows-right-left) fuer das Wechseln zwischen zwei Antriebsquellen -
-     * das trifft den Kern eines Hybridantriebs besser als ein beliebiges
-     * "gemischtes" Symbol ohne inhaltlichen Bezug. Sonstige bleibt bewusst
-     * neutral (Fragezeichen), weil die Antriebsart hier nicht feststeht.
+     * Jede Antriebsart bekommt ein eigenes Symbol. Zwei Arten mit demselben
+     * Symbol wären schlimmer als keins: es steht neben dem Text und soll ihn
+     * auf einen Blick unterscheidbar machen, nicht bloß schmücken.
+     *
+     * Heroicons v2 hat kein Zapfsäulen- und kein Tropfen-Symbol (nur die
+     * Pipette, die an ein Werkzeug erinnert), daher die Umschreibungen:
+     * Flamme für den Ottomotor, Becher für den Kraftstoff des Diesels, zwei
+     * die Richtung tauschende Pfeile für den Wechsel zweier Antriebsquellen
+     * beim Hybrid, Stecker für die Ladbarkeit des Plug-in-Hybrids, Blitz für
+     * rein elektrisch. Sonstige bleibt neutral (Fragezeichen), weil die
+     * Antriebsart dort gerade nicht feststeht.
      */
     public function getIcon(): string|BackedEnum|null
     {
         return match ($this) {
-            self::Petrol, self::Diesel => Heroicon::OutlinedFire,
-            self::Hybrid, self::PluginHybrid => Heroicon::OutlinedArrowsRightLeft,
+            self::Petrol => Heroicon::OutlinedFire,
+            self::Diesel => Heroicon::OutlinedBeaker,
+            self::Hybrid => Heroicon::OutlinedArrowsRightLeft,
+            self::PluginHybrid => Heroicon::OutlinedPower,
             self::Electric => Heroicon::OutlinedBolt,
             self::Other => Heroicon::OutlinedQuestionMarkCircle,
         };
