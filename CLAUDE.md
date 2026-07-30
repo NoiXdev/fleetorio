@@ -12,6 +12,12 @@ von Null durchläuft — hat die Benutzerkonten gelöscht, und der Zugang zur An
 
 `ddev artisan migrate` (nur vorwärts) ist unbedenklich.
 
+**Auch keine schreibenden `tinker`-Befehle gegen diese Datenbank.** Das ist die zweite Falle und
+sie ist schon zugeschnappt: Ein `ddev artisan tinker --execute="…"` zum Debuggen hat Testdaten in
+die Arbeitsdatenbank geschrieben. Lesende Abfragen sind in Ordnung; alles, was anlegt, ändert
+oder löscht, gehört in einen Test oder in den Docker-Compose-Stack mit seiner eigenen
+Wegwerf-Datenbank.
+
 **Wenn du die Migrationskette von Null prüfen willst:** Die Testsuite tut das bei jedem Lauf.
 Sie arbeitet auf der eigenen Datenbank `test` und baut sie selbst auf:
 
