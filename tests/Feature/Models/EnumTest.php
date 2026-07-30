@@ -17,6 +17,10 @@ it('covers every fuel type from the spec', function () {
     expect(FuelType::cases())->toHaveCount(6);
 });
 
+it('provides an icon for every fuel type', function (FuelType $fuelType) {
+    expect($fuelType->getIcon())->not->toBeNull();
+})->with(FuelType::cases());
+
 it('provides labels and colours for vehicle status', function () {
     expect(VehicleStatus::Active->getLabel())->toBe('Aktiv')
         ->and(VehicleStatus::Retired->getLabel())->toBe('Ausgemustert')

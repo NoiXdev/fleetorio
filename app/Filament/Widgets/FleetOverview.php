@@ -2,9 +2,14 @@
 
 namespace App\Filament\Widgets;
 
+use App\Enums\FuelType;
 use App\Models\Vehicle;
+use Filament\Support\Enums\IconSize;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Illuminate\Support\HtmlString;
+
+use function Filament\Support\generate_icon_html;
 
 class FleetOverview extends BaseWidget
 {
@@ -19,16 +24,36 @@ class FleetOverview extends BaseWidget
         ];
     }
 
+    /**
+     * Antriebsart-Icons in der Beschreibung: Stat::description() akzeptiert
+     * laut Filament\Schemas\Components\Concerns\HasDescription auch ein
+     * Htmlable, und Blades {{ }} (Illuminate\Support\e()) gibt ein Htmlable
+     * unveraendert zurueck statt es zu escapen - deshalb hier eine HtmlString
+     * statt eines reinen Textes. ->descriptionIcon() reicht nicht, weil eine
+     * Stat-Karte davon nur genau eine besitzt, hier aber je Antriebsart ein
+     * eigenes Icon noetig ist. generate_icon_html() ist Filaments eigene
+     * Helper-Funktion (auch von den Vendor-Templates selbst verwendet) - kein
+     * CDN, keine neue Abhaengigkeit.
+     */
     private function fleetSizeStat(): Stat
     {
-        // Gruppierung und Sortierung nach Antriebsart leben zentral auf dem
-        // Vehicle-Model (Vehicle::activeCountsByFuelType()), weil die
-        // öffentliche Startseite dieselbe Aufteilung zeigt.
-        $breakdown = Vehicle::activeFuelTypeBreakdown();
+        // Gruppierung und Sortierung nach Antriebsart lebt zentral auf dem
+        // Vehicle-Model (Vehicle::activeCountsByFuelType()).
+        $counts = Vehicle::activeCountsByFuelType();
+
+        $description = $counts->isEmpty()
+            ? 'Noch keine Fahrzeuge erfasst'
+            : new HtmlString(
+                $counts->map(function (int $total, string $fuelType): string {
+                    $type = FuelType::from($fuelType);
+                    $icon = generate_icon_html($type->getIcon(), size: IconSize::Small);
+
+                    return $icon?->toHtml().e("{$total} {$type->getLabel()}");
+                })->implode(' · ')
+            );
 
         return Stat::make('Aktive Fahrzeuge', (string) Vehicle::active()->count())
-            ->description($breakdown !== '' ? $breakdown : 'Noch keine Fahrzeuge erfasst')
-            ->descriptionIcon('heroicon-m-truck')
+            ->description($description)
             ->color('primary');
     }
 

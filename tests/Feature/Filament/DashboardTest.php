@@ -85,7 +85,23 @@ it('sorts the fuel type breakdown by count, then by enum order on ties', functio
 
     $stat = findStatByLabel(fleetOverviewStats(), 'Aktive Fahrzeuge');
 
-    expect($stat->getDescription())->toBe('3 Diesel · 1 Benzin · 1 Elektro');
+    // Die Beschreibung ist seit den Antriebsart-Icons (siehe FleetOverview::
+    // fleetSizeStat()) ein HtmlString mit einem Icon je Antriebsart statt
+    // reinen Textes - deshalb hier auf Inhalt und Reihenfolge der Positionen
+    // geprüft statt auf exakte Textgleichheit.
+    $description = (string) $stat->getDescription();
+
+    expect($description)
+        ->toContain('3 Diesel')
+        ->toContain('1 Benzin')
+        ->toContain('1 Elektro');
+
+    $dieselPosition = strpos($description, '3 Diesel');
+    $petrolPosition = strpos($description, '1 Benzin');
+    $electricPosition = strpos($description, '1 Elektro');
+
+    expect($dieselPosition)->toBeLessThan($petrolPosition)
+        ->and($petrolPosition)->toBeLessThan($electricPosition);
 });
 
 it('names the vehicle whose lease expires next', function () {
