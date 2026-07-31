@@ -1,7 +1,30 @@
-# Fuhrparkmanagement
+# Fleetorio
 
-Interne Web-App zur Dokumentation des Firmenfuhrparks: Fahrzeuge, Fahrer, Tankkarten,
-Leasingzeiträume und Kosten.
+Fuhrparkverwaltung für kleine und mittlere Betriebe. Dokumentiert, welches Fahrzeug wer fährt,
+welche Verträge daran hängen und was es kostet — und erinnert an das, was sonst untergeht:
+auslaufende Leasingverträge und fällige Hauptuntersuchungen.
+
+Gedacht für Betriebe, die ihren Fuhrpark bisher in einer Tabellenkalkulation führen und dabei
+Fristen übersehen.
+
+## Was die Anwendung kann
+
+- **Fahrzeuge** mit Foto, Kennzeichen, Fahrgestellnummer, Antriebsart und Status
+- **Zuordnungen** zu Mitarbeitern, Tankkarten, Leasinggebern und Autohäusern — alles als
+  pflegbare Stammdaten
+- **Termine** je Fahrzeug: Service, Werkstatt, Hauptuntersuchung, mit Kilometerstand und Kosten
+- **Dokumente** je Fahrzeug (Fahrzeugschein, Leasingvertrag, HU-Bericht), nur für Angemeldete
+  abrufbar
+- **Warnungen** auf der Startseite: Leasingverträge, die in 180 Tagen auslaufen, und
+  Hauptuntersuchungen, die in 60 Tagen fällig werden
+- **Kostenauswertung** mit Jahreskosten je Fahrzeug und Summenzeile, hinter einem eigenen Recht
+- **Export** nach CSV für die Buchhaltung, mit Semikolon als Trennzeichen für deutsches Excel
+- **Rechte**: Administratoren dürfen alles, Nur-Lese-Benutzer lesen und exportieren. Wer Beträge
+  sehen darf, ist davon unabhängig geregelt.
+- **Erscheinungsbild** über die Oberfläche anpassbar: Name, Logo und Primärfarbe
+
+Zwei-Faktor-Anmeldung ist eingebaut und derzeit freiwillig. Der Name „Fleetorio" ist nur der
+Standardwert — unter *Verwaltung → Erscheinungsbild* trägt jeder Betrieb seinen eigenen ein.
 
 ## Stack
 
