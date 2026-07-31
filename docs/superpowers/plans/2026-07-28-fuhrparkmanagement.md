@@ -14,7 +14,7 @@ Diese Vorgaben gelten für **jede** Task. Sie stammen aus der Spec
 (`docs/superpowers/specs/2026-07-28-fuhrparkmanagement-design.md`) und aus der verifizierten
 Filament-5-API.
 
-- **Projektwurzel:** `/Users/rtebest/_dev/misc/fuhrpark` (Git-Repo existiert, enthält bereits `docs/`)
+- **Projektwurzel:** das Verzeichnis dieses Repositorys (Git-Repo existiert, enthält bereits `docs/`)
 - **Alle PHP-/Artisan-/Composer-Befehle laufen über DDEV:** `ddev artisan …`, `ddev composer …`, `ddev exec vendor/bin/pest`. PHP und Composer sind auf dem Host **nicht** installiert.
 - **Versionsuntergrenzen:** PHP ≥ 8.3 (Laravel-13-Skeleton fordert `^8.3`), Laravel ≥ 13.8, Filament ≥ 5.7, Livewire ≥ 4.1, Tailwind ≥ 4.1
 - **Warnfenster für Leasingende: 180 Tage**, fest im Code als Konstante, nicht konfigurierbar
@@ -90,7 +90,7 @@ kopiert anschließend), aber Schritt 4 verifiziert explizit, dass `docs/` überl
 - [ ] **Step 1: DDEV konfigurieren**
 
 ```bash
-cd /Users/rtebest/_dev/misc/fuhrpark
+cd <projektwurzel>
 ddev config --project-type=laravel --docroot=public --project-name=fuhrpark
 ```
 
