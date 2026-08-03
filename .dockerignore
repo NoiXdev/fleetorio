@@ -1,64 +1,28 @@
-# Dependencies are installed inside the image, never copied in from the host.
-/vendor
-/node_modules
-
-# Local dev environment and tooling - irrelevant to the image, and .ddev in
-# particular must never leak in since it can carry local host state.
 .git
 .gitattributes
-.github
-.ddev
+.gitignore
 .idea
-.vscode
-.nova
-.zed
-.phpactor.json
-.phpunit.result.cache
-.phpunit.cache
-.superpowers
-docs
-
-# Never let the development .env into the image - it holds the development
-# environment's APP_KEY. Production configuration comes only from container
-# environment variables (see .env.docker.example).
+.ddev
+.claude
+.editorconfig
+.eslintrc.json
+.prettierrc
 .env
 .env.*
-!.env.example
 !.env.docker.example
-
-# Tests aren't part of the deployable artifact.
-/tests
+node_modules
+vendor
+public/build
+public/hot
+public/storage
+storage/app/gitdumper
+storage/app/public
+storage/logs/*.log
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/framework/testing/*
+bootstrap/cache/*
+tests
 phpunit.xml
-
-# Runtime-generated content: recreated fresh by the container, or replaced by
-# a mounted volume.
-/storage/logs/*
-!/storage/logs/.gitignore
-/storage/framework/cache/*
-!/storage/framework/cache/.gitignore
-!/storage/framework/cache/data
-/storage/framework/cache/data/*
-/storage/framework/sessions/*
-!/storage/framework/sessions/.gitignore
-/storage/framework/views/*
-!/storage/framework/views/.gitignore
-/storage/app/*
-!/storage/app/.gitignore
-!/storage/app/public
-!/storage/app/private
-/storage/app/public/*
-!/storage/app/public/.gitignore
-/storage/app/private/*
-!/storage/app/private/.gitignore
-/storage/*.key
-/storage/pail
-
-# Never built by this image.
-/public/build
-/public/hot
-
-# Misc noise
-*.log
-.DS_Store
-Thumbs.db
 README.md

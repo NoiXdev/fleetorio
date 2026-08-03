@@ -1,32 +1,52 @@
 #!/bin/sh
-# Container entrypoint: validate the environment, cache config for this
-# runtime environment, then hand off to FrankenPHP.
-#
-# config:cache/route:cache/view:cache run HERE and not during `docker build`
-# on purpose: at build time none of the real environment variables (DB_*,
-# APP_URL, MAIL_*, ...) are known yet, so a config cache baked into the image
-# would freeze in empty/default values. Every container would then silently
-# ignore whatever environment it was actually started with - the classic
-# containerized-Laravel footgun. Caching after the environment is available,
-# every time the container starts, is the only correct order.
 set -e
 
-if [ -z "$APP_KEY" ]; then
-    echo "FATAL: APP_KEY is not set." >&2
-    echo "" >&2
-    echo "Copy the APP_KEY from the existing installation's .env into this" >&2
-    echo "container's environment - do not generate a new one with" >&2
-    echo "'artisan key:generate'. A different key makes already-encrypted" >&2
-    echo "data (fuel card numbers, two-factor secrets) permanently unreadable." >&2
-    exit 1
+# Runs as `www-data` (set by Dockerfile). Storage and bootstrap/cache are
+# owned by www-data at build time, so no chown step is needed at runtime.
+
+mkdir -p \
+    storage/framework/cache \
+    storage/framework/sessions \
+    storage/framework/views \
+    storage/framework/testing \
+    storage/logs \
+    storage/app/gitdumper \
+    bootstrap/cache
+
+if [ -n "${DB_HOST:-}" ]; then
+    echo "Waiting for database at ${DB_HOST}:${DB_PORT:-3306}..."
+    db_ready=0
+    for i in $(seq 1 60); do
+        # Credentials passed via env, not argv, so they don't leak in /proc.
+        if php -r 'try{new PDO("mysql:host=".getenv("DB_HOST").";port=".(getenv("DB_PORT")?:3306), getenv("DB_USERNAME"), getenv("DB_PASSWORD"));exit(0);}catch(Throwable $e){exit(1);}' 2>/dev/null; then
+            echo "Database is up."
+            db_ready=1
+            break
+        fi
+        sleep 2
+    done
+    if [ "$db_ready" -ne 1 ]; then
+        echo "Database at ${DB_HOST}:${DB_PORT:-3306} never became reachable. Aborting." >&2
+        exit 1
+    fi
 fi
 
+php artisan package:discover --ansi
+php artisan filament:upgrade --ansi
 php artisan config:cache
-php artisan route:cache
+php artisan event:cache
 php artisan view:cache
+# route:cache is intentionally skipped: Route::inertia() and other macros use closures.
+# Frontend assets are built by Vite into public/build at image-build time; nothing to publish at boot.
 
-# Migrations are a deliberate, separate operational step (see README) and
-# never run automatically here: this image may be started as more than one
-# instance, and auto-migrating on every container start is unsafe in that case.
+echo "▶ Install assets"
+php artisan filament:assets
+php artisan vendor:publish --tag=livewire:assets
 
-exec docker-php-entrypoint "$@"
+# RUN_MIGRATIONS=true is the default; set to "false" on multi-replica
+# deployments and run migrations as a one-shot job to avoid races.
+if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
+    php artisan migrate --force
+fi
+
+exec "$@"
