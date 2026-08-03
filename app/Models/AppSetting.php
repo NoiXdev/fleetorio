@@ -28,15 +28,20 @@ use Throwable;
  * (Cache::rememberForever); AppearanceSettings::save() leert ihn wieder,
  * sonst wirkte eine Aenderung erst nach einem Neustart.
  *
- * WICHTIG - der Ausfallschutz: cached() prueft die Tabellen-Existenz, statt
- * eine Exception abzufangen und zu verschlucken, und liefert dann
- * Standardwerte. Ohne das wuerde jeder artisan-Aufruf - einschliesslich der
- * allerersten `migrate` auf einem frischen System, die diese Tabelle
- * ueberhaupt erst anlegt - mit einer Exception abbrechen, weil
- * AdminPanelProvider::panel() bei jedem Boot ausgewertet wird, bevor die
- * Tabelle existiert. Das eng gefasste catch(Throwable) daneben faengt nur
- * den Fall ab, dass die Datenbank ueberhaupt nicht erreichbar ist (dort
- * wuerde schon Schema::hasTable() selbst scheitern).
+ * WICHTIG - der Ausfallschutz auf ZWEI Ebenen: AdminPanelProvider::panel()
+ * wird bei jedem Boot ausgewertet - einschliesslich der allerersten
+ * `migrate` auf einem frischen System, die die Tabellen ueberhaupt erst
+ * anlegt. Auf einem solchen System fehlen aber gleich zwei Tabellen:
+ *   1. app_settings selbst - resolveSettings() prueft ihre Existenz per
+ *      Schema::hasTable() und liefert sonst Standardwerte.
+ *   2. die 'cache'-Tabelle - denn CACHE_STORE=database (der Standard der
+ *      .env) legt den Cache ebenfalls in die Datenbank. Cache::rememberForever
+ *      greift dann selbst auf eine noch fehlende Tabelle zu, bevor die Closure
+ *      und damit der Schutz aus (1) ueberhaupt laufen kann. Deshalb umschliesst
+ *      cached() den GESAMTEN Cache-Aufruf mit try/catch und faellt auf die
+ *      ungecachte resolveSettings() zurueck.
+ * Ohne beide Ebenen waere ein frischer Klon dieses Projekts nicht migrierbar,
+ * weil jeder artisan-Aufruf mit einer QueryException abbraeche.
  */
 class AppSetting extends Model
 {
@@ -240,28 +245,46 @@ class AppSetting extends Model
      */
     private static function cached(): array
     {
-        return Cache::rememberForever(static::CACHE_KEY, function (): array {
-            try {
-                // Tabellen-Existenz statt Exception-Handling als primaere
-                // Pruefung: so bricht auch dann nichts, wenn die Tabelle
-                // schlicht noch nicht existiert (frisches System, laufende
-                // Migration) - der Normalfall beim allerersten Deployment.
-                if (! Schema::hasTable('app_settings')) {
-                    return [];
-                }
+        try {
+            return Cache::rememberForever(static::CACHE_KEY, static::resolveSettings(...));
+        } catch (Throwable $exception) {
+            // Der Cache-Store selbst kann fehlschlagen: liegt er auf der
+            // Datenbank (CACHE_STORE=database, der Standard der .env), greift
+            // Cache::rememberForever auf die Tabelle 'cache' zu - die beim
+            // allerersten `migrate` auf einem frischen System noch gar nicht
+            // existiert. Dann die Werte ungecacht direkt aufloesen, statt den
+            // gesamten Boot (und damit `migrate` selbst) abzubrechen. Der
+            // Schema::hasTable('app_settings')-Schutz in resolveSettings()
+            // greift erst *innerhalb* der Closure und liefe zu spaet.
+            return static::resolveSettings();
+        }
+    }
 
-                $settings = static::query()->find(static::SINGLETON_ID);
-
-                return $settings?->only(['brand_name', 'logo_path', 'primary_color']) ?? [];
-            } catch (Throwable $exception) {
-                // Eng gefasster Ausfallschutz: Schema::hasTable() selbst kann
-                // ebenfalls fehlschlagen, wenn die Datenbank ueberhaupt nicht
-                // erreichbar ist (nicht nur wenn die Tabelle fehlt). In
-                // beiden Faellen sollen Standardwerte greifen, statt die
-                // gesamte Anwendung - inklusive jedem artisan-Aufruf - mit
-                // dieser Exception abzubrechen.
+    /**
+     * @return array{brand_name?: ?string, logo_path?: ?string, primary_color?: ?string}
+     */
+    private static function resolveSettings(): array
+    {
+        try {
+            // Tabellen-Existenz statt Exception-Handling als primaere
+            // Pruefung: so bricht auch dann nichts, wenn die Tabelle
+            // schlicht noch nicht existiert (frisches System, laufende
+            // Migration) - der Normalfall beim allerersten Deployment.
+            if (! Schema::hasTable('app_settings')) {
                 return [];
             }
-        });
+
+            $settings = static::query()->find(static::SINGLETON_ID);
+
+            return $settings?->only(['brand_name', 'logo_path', 'primary_color']) ?? [];
+        } catch (Throwable $exception) {
+            // Eng gefasster Ausfallschutz: Schema::hasTable() selbst kann
+            // ebenfalls fehlschlagen, wenn die Datenbank ueberhaupt nicht
+            // erreichbar ist (nicht nur wenn die Tabelle fehlt). In
+            // beiden Faellen sollen Standardwerte greifen, statt die
+            // gesamte Anwendung - inklusive jedem artisan-Aufruf - mit
+            // dieser Exception abzubrechen.
+            return [];
+        }
     }
 }

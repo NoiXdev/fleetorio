@@ -1,11 +1,13 @@
 <?php
 
 use App\Filament\Actions\GuardedDeleteAction;
+use App\Filament\Resources\Employees\Pages\CreateEmployee;
 use App\Filament\Resources\Employees\Pages\EditEmployee;
 use App\Filament\Resources\Employees\Pages\ListEmployees;
 use App\Models\Employee;
 use App\Models\User;
 use App\Models\Vehicle;
+use Filament\Actions\CreateAction;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
@@ -24,7 +26,7 @@ it('lists employees', function () {
 });
 
 it('creates an employee', function () {
-    livewire(\App\Filament\Resources\Employees\Pages\CreateEmployee::class)
+    livewire(CreateEmployee::class)
         ->fillForm([
             'first_name' => 'Anna',
             'last_name' => 'Beispiel',
@@ -38,7 +40,7 @@ it('creates an employee', function () {
 });
 
 it('requires first and last name', function () {
-    livewire(\App\Filament\Resources\Employees\Pages\CreateEmployee::class)
+    livewire(CreateEmployee::class)
         ->fillForm(['first_name' => null, 'last_name' => null])
         ->call('create')
         ->assertHasFormErrors(['first_name' => 'required', 'last_name' => 'required']);
@@ -71,7 +73,7 @@ it('hides write actions from viewers', function () {
 
     livewire(ListEmployees::class)
         ->assertOk()
-        ->assertActionHidden(\Filament\Actions\CreateAction::class);
+        ->assertActionHidden(CreateAction::class);
 });
 
 it('denies a viewer direct http access to the create-employee page', function () {

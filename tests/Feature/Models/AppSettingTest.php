@@ -84,6 +84,43 @@ it('keeps artisan and the panel usable when the app_settings table does not exis
     }
 });
 
+/*
+ * Die zweite Haelfte desselben Ausfallschutzes: Auf einem frischen System
+ * fehlt nicht nur app_settings, sondern - bei CACHE_STORE=database (der
+ * Standard der .env) - auch die cache-Tabelle selbst. Cache::rememberForever
+ * greift dann auf eine noch nicht existierende Tabelle zu, lange bevor der
+ * Schema::hasTable('app_settings')-Schutz in der Closure ueberhaupt laufen
+ * kann. Die Testsuite laeuft sonst mit CACHE_STORE=array, wo dieser Pfad nie
+ * auftritt; deshalb hier gezielt auf den database-Store umgestellt.
+ */
+it('keeps artisan and the panel usable when the cache store table does not exist', function () {
+    config()->set('cache.default', 'database');
+    AppSetting::forgetCache();
+
+    $cacheMigration = include database_path('migrations/0001_01_01_000001_create_cache_table.php');
+
+    Schema::drop('cache');
+    Schema::drop('cache_locks');
+
+    try {
+        expect(Schema::hasTable('cache'))->toBeFalse();
+
+        // Ein beliebiger artisan-Aufruf boot-strappt die Anwendung
+        // vollstaendig, inklusive AdminPanelProvider::panel() - genau der
+        // Pfad, an dem die allererste `migrate` sonst abbricht.
+        $this->artisan('list')->assertSuccessful();
+
+        expect(AppSetting::name())->toBe('Fleetorio')
+            ->and(AppSetting::color())->toBe('#2563eb')
+            ->and(AppSetting::hasCustomLogo())->toBeFalse();
+    } finally {
+        // Wie beim app_settings-Drop oben: DROP TABLE committet implizit und
+        // durchbricht die RefreshDatabase-Transaktion. up() legt cache und
+        // cache_locks wieder an, sonst fehlen sie den Folgetests.
+        $cacheMigration->up();
+    }
+});
+
 it('builds a palette whose shade 600 is exactly the configured color', function (string $hex) {
     $palette = AppSetting::buildPalette($hex);
 

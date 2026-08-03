@@ -15,7 +15,7 @@ class Login extends BaseLogin
      * unverändert im Elternteil, damit das eingebaute Rate-Limiting
      * (5 Versuche, 60 Sekunden Sperre) erhalten bleibt.
      */
-    public function getHeading(): string | Htmlable | null
+    public function getHeading(): string|Htmlable|null
     {
         return 'Login zum '.AppSetting::name();
     }

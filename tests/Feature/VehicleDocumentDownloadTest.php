@@ -4,6 +4,7 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleDocument;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 use function Pest\Laravel\actingAs;
 
@@ -56,7 +57,7 @@ it('serves the original filename via content-disposition even though the stored 
     Storage::fake('local');
 
     $document = VehicleDocument::factory()->for(Vehicle::factory())->create([
-        'file_path' => 'vehicle-documents/'.\Illuminate\Support\Str::ulid().'.pdf',
+        'file_path' => 'vehicle-documents/'.Str::ulid().'.pdf',
         'original_filename' => 'Übergabeprotokoll Muster.pdf',
     ]);
     Storage::disk('local')->put($document->file_path, 'dummy content');

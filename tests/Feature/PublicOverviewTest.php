@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\FuelType;
+use App\Models\AppSetting;
 use App\Models\Employee;
 use App\Models\User;
 use App\Models\Vehicle;
@@ -39,7 +40,7 @@ it('shows the company logo and uses it as favicon', function () {
 });
 
 it('shows the configured brand name and logo instead of the default once settings are saved', function () {
-    \App\Models\AppSetting::factory()->create(['brand_name' => 'Testflotte']);
+    AppSetting::factory()->create(['brand_name' => 'Testflotte']);
 
     $this->get('/')
         ->assertOk()
