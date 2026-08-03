@@ -58,67 +58,16 @@ jobs:
       - name: Run Pint
         run: vendor/bin/pint --test --format=txt
 
-  test:
-    name: PHPUnit
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: lint
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
-        with:
-          php-version: "8.4"
-          extensions: bcmath, exif, gd, intl, opcache, pcntl, pdo_sqlite, redis, zip
-          tools: composer:v2
-          coverage: none
-
-      - name: Cache Composer dependencies
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v5
-        with:
-          path: vendor
-          key: composer-${{ runner.os }}-${{ hashFiles('composer.lock') }}
-          restore-keys: composer-${{ runner.os }}-
-
-      - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v6
-        with:
-          node-version: 22
-
-      - name: Enable pnpm via Corepack
-        run: corepack enable
-
-      - name: Install JS dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build frontend assets
-        # composer install runs `artisan package:discover` in post-autoload-dump,
-        # which resolves Vite::asset() — that requires public/build/manifest.json
-        # to exist before composer install.
-        run: pnpm run build
-
-      - name: Install Composer dependencies
-        run: composer install --no-interaction --prefer-dist --no-progress
-
-      - name: Copy .env.example
-        run: cp .env.example .env
-
-      - name: Generate APP_KEY
-        run: php artisan key:generate
-
-      - name: Run PHPUnit
-        run: php artisan test --compact
-
   test-mariadb:
     name: PHPUnit (MariaDB)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: lint
     services:
-      # Match dev/prod (ddev is MariaDB 11.8). Catches driver-specific SQL bugs
-      # that the SQLite `test` job cannot see (e.g. strict types / UUID-in-morph
-      # truncation), which is exactly why this job exists alongside SQLite.
+      # Match dev/prod (ddev is MariaDB 11.8). This is the sole PHPUnit job:
+      # the migrations use MariaDB-specific SQL (see the fuel-card-provider
+      # enum→relation migration) and do not run on SQLite, so a SQLite job
+      # could never go green.
       mariadb:
         image: mariadb:11.8
         env:
@@ -209,14 +158,14 @@ jobs:
           # security updates; a cached base/apt layer served stale OS packages
           # that Trivy (rightly) flagged as vulnerable.
           pull: true
-          tags: Fleetorio:ci
+          tags: fleetorio:ci
 
       - name: Scan image with Trivy
         # Pinned to SHA, not tag — CVE-2026-33634 was a tag-hijacking attack
         # against this exact action. Bump by replacing the SHA, not the tag.
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          image-ref: Fleetorio:ci
+          image-ref: fleetorio:ci
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: 1
