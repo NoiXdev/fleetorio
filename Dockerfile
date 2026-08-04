@@ -43,6 +43,10 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Das Basisimage lädt keine php.ini, es gelten PHPs eingebaute Standardwerte.
+# Ohne diese Datei begrenzt PHP Uploads auf 2 MB — die Anwendung erlaubt 25 MB.
+COPY docker/php-prod.ini /usr/local/etc/php/conf.d/zz-app-prod.ini
+
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 COPY composer.json composer.lock ./

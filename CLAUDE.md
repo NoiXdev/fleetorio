@@ -56,7 +56,9 @@ Feldnamen ab.
 - **Upload-Grenzen liegen auf drei Ebenen und müssen zusammenpassen.** Greift die äußerste,
   scheitert der Upload mit einer Meldung, aus der die Ursache nicht hervorgeht („Feld ist
   erforderlich" statt einer Aussage zur Größe):
-  1. PHP — `docker/uploads-prod.ini` (im Image; php.ini-production erlaubt sonst nur 2 MB)
+  1. PHP — `docker/php-prod.ini` (wird im `Dockerfile` nach
+     `/usr/local/etc/php/conf.d/` kopiert; das FrankenPHP-Basisimage lädt keine php.ini,
+     PHPs eingebauter Standard erlaubt nur 2 MB)
   2. Livewire — `config/livewire.php`, `temporary_file_upload.rules` (Standard sind 12 MB)
   3. Filament — `maxSize()` am Feld, aus `MAX_FILE_SIZE_KB` bzw. `MAX_IMAGE_SIZE_KB`
   Aktuell: Dokumente 25 MB, Bilder 10 MB, darüber 30 MB Puffer bei Livewire und PHP. Die
