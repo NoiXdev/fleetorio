@@ -46,7 +46,9 @@ it('requires a unique name', function () {
 });
 
 it('refuses to delete a provider that is still assigned to a card', function () {
-    $provider = FuelCardProvider::factory()->create();
+    // Loeschen setzt seit der Umstellung voraus, dass der Datensatz inaktiv
+    // ist - ein aktiver bietet die Aktion gar nicht erst an.
+    $provider = FuelCardProvider::factory()->create(['active' => false]);
     FuelCard::factory()->create(['fuel_card_provider_id' => $provider->id]);
 
     livewire(EditFuelCardProvider::class, ['record' => $provider->id])
@@ -57,7 +59,9 @@ it('refuses to delete a provider that is still assigned to a card', function () 
 });
 
 it('allows deleting a provider that is not assigned to any card', function () {
-    $provider = FuelCardProvider::factory()->create();
+    // Loeschen setzt seit der Umstellung voraus, dass der Datensatz inaktiv
+    // ist - ein aktiver bietet die Aktion gar nicht erst an.
+    $provider = FuelCardProvider::factory()->create(['active' => false]);
 
     livewire(EditFuelCardProvider::class, ['record' => $provider->id])
         ->callAction(GuardedDeleteAction::class);

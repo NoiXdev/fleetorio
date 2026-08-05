@@ -2,6 +2,7 @@
 
 namespace App\Filament\Actions;
 
+use App\Filament\Actions\Concerns\TracksActiveState;
 use Closure;
 use Filament\Actions\DeleteAction;
 use Filament\Notifications\Notification;
@@ -19,9 +20,17 @@ use Illuminate\Database\Eloquent\Model;
  * vehicles.*) - dafuer lassen sich Relation, Beschriftung und Meldungstext
  * ueber guardedBy() umstellen, ohne dass sich am Standardverhalten der
  * uebrigen Aufrufer etwas aendert.
+ *
+ * Seit der Umstellung auf "Deaktivieren statt Loeschen" ist das der zweite
+ * Schritt: Ein aktiver Datensatz wird deaktiviert (DeactivateAction), und erst
+ * ein inaktiver laesst sich entfernen. Die beiden Bedingungen greifen
+ * unabhaengig voneinander - der Zustand entscheidet, ob geloescht werden darf,
+ * der Fremdschluessel, ob es technisch geht.
  */
 class GuardedDeleteAction extends DeleteAction
 {
+    use TracksActiveState;
+
     protected string $guardedRelationshipName = 'vehicles';
 
     /**
@@ -37,6 +46,13 @@ class GuardedDeleteAction extends DeleteAction
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->modalHeading('Endgültig löschen');
+
+        // Nur inaktive Datensaetze duerfen ueberhaupt geloescht werden. Wer
+        // hier eine weitere visible()-Bedingung ergaenzt, muss diese
+        // mitnehmen - sonst ist die Regel an dieser Stelle aufgehoben.
+        $this->visible(fn (Model $record): bool => ! $this->isRecordActive($record));
 
         $this->before(function (GuardedDeleteAction $action, Model $record): void {
             $relationship = $record->{$this->guardedRelationshipName}();
@@ -59,7 +75,7 @@ class GuardedDeleteAction extends DeleteAction
 
             Notification::make()
                 ->danger()
-                ->title('Löschen nicht möglich')
+                ->title('Endgültig löschen nicht möglich')
                 ->body($message)
                 ->persistent()
                 ->send();
