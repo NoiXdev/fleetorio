@@ -60,6 +60,10 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => AppSetting::palette(),
                 'danger' => Color::Rose,
+                // Zusaetzlich registriert fuer AppointmentType::Damage -
+                // 'warning' ist bereits fuer die Hauptuntersuchung belegt,
+                // und jeder Historien-Typ soll seine eigene Farbe haben.
+                'orange' => Color::Orange,
             ])
             ->login(Login::class)
             ->passwordReset()

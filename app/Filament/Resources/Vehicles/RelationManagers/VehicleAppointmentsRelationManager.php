@@ -25,7 +25,13 @@ class VehicleAppointmentsRelationManager extends RelationManager
 {
     protected static string $relationship = 'appointments';
 
-    protected static ?string $title = 'Termine';
+    // "Historie" statt "Termine", weil hier nicht nur planbare Ereignisse
+    // (Service, Werkstatt, Hauptuntersuchung) landen, sondern auch nicht
+    // planbare wie Unfall und Schaden. Klassen- und Tabellenname bleiben
+    // absichtlich unveraendert (VehicleAppointment, vehicle_appointments):
+    // eine Umbenennung waere eine Migration und aendert fuer Nutzer nichts
+    // Sichtbares.
+    protected static ?string $title = 'Historie';
 
     /**
      * Siehe Kommentar an VehicleDocumentsRelationManager::$isLazy - dasselbe

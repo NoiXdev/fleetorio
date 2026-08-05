@@ -112,7 +112,7 @@ class VehicleResource extends Resource
     public static function getRelations(): array
     {
         return [
-            RelationGroup::make('Dokumente & Termine', [
+            RelationGroup::make('Dokumente & Historie', [
                 VehicleDocumentsRelationManager::class,
                 VehicleAppointmentsRelationManager::class,
             ]),
