@@ -84,7 +84,9 @@ it('shows the provider name in the list', function () {
 });
 
 it('refuses to delete a card that is still assigned', function () {
-    $card = FuelCard::factory()->create();
+    // Loeschen setzt seit der Umstellung voraus, dass der Datensatz inaktiv
+    // ist - ein aktiver bietet die Aktion gar nicht erst an.
+    $card = FuelCard::factory()->create(['active' => false]);
     Vehicle::factory()->for($card)->create(['license_plate' => 'M-CD 5678']);
 
     livewire(EditFuelCard::class, ['record' => $card->id])

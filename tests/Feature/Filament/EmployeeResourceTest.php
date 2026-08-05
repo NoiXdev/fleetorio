@@ -47,7 +47,9 @@ it('requires first and last name', function () {
 });
 
 it('refuses to delete an employee who still has a vehicle', function () {
-    $employee = Employee::factory()->create();
+    // Loeschen setzt seit der Umstellung voraus, dass der Datensatz inaktiv
+    // ist - ein aktiver bietet die Aktion gar nicht erst an.
+    $employee = Employee::factory()->create(['active' => false]);
     Vehicle::factory()->for($employee)->create(['license_plate' => 'M-AB 1234']);
 
     livewire(EditEmployee::class, ['record' => $employee->id])
@@ -59,7 +61,9 @@ it('refuses to delete an employee who still has a vehicle', function () {
 });
 
 it('deletes an employee without vehicles', function () {
-    $employee = Employee::factory()->create();
+    // Loeschen setzt seit der Umstellung voraus, dass der Datensatz inaktiv
+    // ist - ein aktiver bietet die Aktion gar nicht erst an.
+    $employee = Employee::factory()->create(['active' => false]);
 
     livewire(EditEmployee::class, ['record' => $employee->id])
         ->callAction(GuardedDeleteAction::class);

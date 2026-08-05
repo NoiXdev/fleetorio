@@ -299,7 +299,17 @@ class VehicleForm
                         ->label('Kennzeichen')
                         ->required()
                         ->maxLength(255)
-                        ->unique(ignoreRecord: true),
+                        ->unique(ignoreRecord: true)
+                        // Ein ausgemustertes Fahrzeug belegt sein Kennzeichen
+                        // weiterhin (so gewollt - sonst stuende dasselbe
+                        // Kennzeichen zweimal in der Tabelle). Ohne diesen
+                        // Hinweis sucht man in der Liste nach einem Eintrag,
+                        // der dort standardmaessig nicht sichtbar ist.
+                        ->validationMessages([
+                            'unique' => 'Dieses Kennzeichen ist bereits vergeben — '
+                                .'möglicherweise von einem ausgemusterten Fahrzeug. '
+                                .'Über den Statusfilter in der Fahrzeugliste sind diese sichtbar.',
+                        ]),
                     // Nicht Pflicht (Auftraggeber-Entscheidung): bei Altbestand
                     // ist die Fahrgestellnummer nicht immer erfasst. Die
                     // Umwandlung in Grossbuchstaben passiert VOR der

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Vehicles\Pages;
 
+use App\Enums\VehicleStatus;
 use App\Filament\Resources\Vehicles\Schemas\VehicleForm;
 use App\Filament\Resources\Vehicles\VehicleResource;
 use Filament\Actions\Action;
@@ -212,11 +213,20 @@ class EditVehicle extends EditRecord
      * Bestaetigung und damit den vollen mountAction()-Ablauf; ohne diesen
      * Methodennamen waere der Knopf weder testbar noch im echten Browser
      * klickbar.
+     *
+     * Sichtbar nur bei einem ausgemusterten Fahrzeug: Loeschen ist der zweite
+     * Schritt, davor steht das Ausmustern (DeactivateAction in der
+     * Fahrzeugliste). Diese Bedingung gehoert genau hierher und nirgends sonst
+     * - die Fahrzeugliste bietet gar kein Loeschen an, es haengt
+     * ausschliesslich an diesem Knopf. Ohne sie waere die Regel an der
+     * einzigen Stelle umgehbar, an der man ein Fahrzeug tatsaechlich loescht.
      */
     public function deleteAction(): Action
     {
         return DeleteAction::make()
             ->outlined()
-            ->color('danger');
+            ->color('danger')
+            ->modalHeading('Fahrzeug endgültig löschen')
+            ->visible(fn (): bool => $this->getRecord()->status === VehicleStatus::Retired);
     }
 }

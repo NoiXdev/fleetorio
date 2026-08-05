@@ -4,6 +4,8 @@ namespace App\Filament\Resources\Vehicles\Tables;
 
 use App\Enums\FuelType;
 use App\Enums\VehicleStatus;
+use App\Filament\Actions\ActivateAction;
+use App\Filament\Actions\DeactivateAction;
 use App\Filament\Exports\VehicleExporter;
 use App\Models\Vehicle;
 use Filament\Actions\EditAction;
@@ -108,6 +110,23 @@ class VehiclesTable
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
+                // Das Fahrzeug fuehrt seinen Zustand als Enum in `status`, nicht
+                // als boolesches `active` wie die Stammdaten - daher
+                // stateColumn(). "Ausmustern" statt "Deaktivieren", weil das
+                // im Fuhrpark das gelaeufige Wort ist.
+                DeactivateAction::make()
+                    ->label('Ausmustern')
+                    ->modalHeading('Fahrzeug ausmustern')
+                    ->modalDescription(
+                        'Das Fahrzeug bleibt mit seiner gesamten Historie, seinen Dokumenten '
+                        .'und Bildern erhalten, zählt aber nicht mehr zum aktiven Bestand. '
+                        .'Löschen ist danach möglich.'
+                    )
+                    ->modalSubmitActionLabel('Ausmustern')
+                    ->stateColumn('status', VehicleStatus::Retired, VehicleStatus::Active),
+                ActivateAction::make()
+                    ->label('Wieder aktivieren')
+                    ->stateColumn('status', VehicleStatus::Retired, VehicleStatus::Active),
             ]);
     }
 }

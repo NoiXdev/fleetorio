@@ -709,7 +709,11 @@ it('lets an admin delete a single vehicle', function () {
     // Das einzelne Loeschen auf der Edit-Seite bleibt erhalten (nur Admins,
     // siehe VehiclePolicy::delete) und verlangt eine Bestaetigung, die
     // Filament fuer DeleteAction standardmaessig erzwingt.
-    $vehicle = Vehicle::factory()->create();
+    //
+    // Ausgemustert, weil Loeschen seit der Umstellung genau das voraussetzt -
+    // ein Fahrzeug im Bestand bietet den Knopf gar nicht erst an (siehe
+    // EditVehicle::deleteAction und DeactivateInsteadOfDeleteTest).
+    $vehicle = Vehicle::factory()->retired()->create();
 
     actingAs(User::factory()->admin()->withTwoFactor()->create());
 

@@ -54,7 +54,9 @@ it('allows a dealership without any address details', function () {
 });
 
 it('refuses to delete a dealership that is still referenced', function () {
-    $dealership = Dealership::factory()->create();
+    // Loeschen setzt seit der Umstellung voraus, dass der Datensatz inaktiv
+    // ist - ein aktiver bietet die Aktion gar nicht erst an.
+    $dealership = Dealership::factory()->create(['active' => false]);
     Vehicle::factory()->for($dealership)->create(['license_plate' => 'M-GH 3456']);
 
     livewire(EditDealership::class, ['record' => $dealership->id])

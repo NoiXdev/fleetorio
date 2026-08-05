@@ -44,7 +44,9 @@ it('requires a name', function () {
 });
 
 it('refuses to delete a company that is still referenced', function () {
-    $company = LeasingCompany::factory()->create();
+    // Loeschen setzt seit der Umstellung voraus, dass der Datensatz inaktiv
+    // ist - ein aktiver bietet die Aktion gar nicht erst an.
+    $company = LeasingCompany::factory()->create(['active' => false]);
     Vehicle::factory()->for($company)->create(['license_plate' => 'M-EF 9012']);
 
     livewire(EditLeasingCompany::class, ['record' => $company->id])

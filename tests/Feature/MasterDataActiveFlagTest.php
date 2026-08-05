@@ -45,12 +45,28 @@ it('casts the active flag to a boolean', function (string $modelClass) {
 it('saves the toggle through the form', function () {
     actingAs(User::factory()->admin()->withTwoFactor()->create());
 
-    $dealership = Dealership::factory()->create(['active' => true]);
+    // Feste Werte statt der Faktor-Vorgaben: Gegenstand dieses Tests ist der
+    // Schalter, nicht was Faker in die uebrigen Felder schreibt. Mit
+    // Zufallsdaten haengt das Ergebnis an der Validierung von sieben Feldern,
+    // die hier niemand pruefen will.
+    $dealership = Dealership::factory()->create([
+        'active' => true,
+        'name' => 'Autohaus Beispiel',
+        'contact_person' => 'Anna Beispiel',
+        'phone' => '089 123456',
+        'email' => 'kontakt@autohaus-beispiel.example',
+        'street' => 'Musterweg 1',
+        'postcode' => '80331',
+        'city' => 'München',
+    ]);
 
-    livewire(EditDealership::class, ['record' => $dealership->getRouteKey()])
+    $component = livewire(EditDealership::class, ['record' => $dealership->getRouteKey()])
         ->fillForm(['active' => false])
-        ->call('save')
-        ->assertHasNoFormErrors();
+        ->call('save');
+
+    // Statt assertHasNoFormErrors(): benennt im Fehlerfall das Feld und die
+    // Meldung, anstatt nur "hat Fehler" zu sagen.
+    expect($component->instance()->getErrorBag()->messages())->toBe([]);
 
     expect($dealership->fresh()->active)->toBeFalse();
 });
