@@ -6,6 +6,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
 
 class FuelCardForm
@@ -31,6 +32,10 @@ class FuelCardForm
                     ->label('Gültig bis')
                     ->native(false)
                     ->displayFormat('d.m.Y'),
+                Toggle::make('active')
+                    ->label('Aktiv')
+                    ->default(true)
+                    ->helperText('Inaktive Einträge tauchen nicht mehr in Auswahllisten auf. Gelöscht werden kann nur, was inaktiv ist.'),
                 Textarea::make('notes')
                     ->label('Notizen')
                     ->rows(3)

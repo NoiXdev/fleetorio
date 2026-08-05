@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\FuelCardProviders\Schemas;
 
 use App\Models\FuelCardProvider;
+use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -25,6 +26,9 @@ class FuelCardProviderInfolist
 
                 Section::make('Notizen')
                     ->schema([
+                        IconEntry::make('active')
+                            ->label('Aktiv')
+                            ->boolean(),
                         TextEntry::make('notes')
                             ->label('Notizen')
                             ->placeholder('—')

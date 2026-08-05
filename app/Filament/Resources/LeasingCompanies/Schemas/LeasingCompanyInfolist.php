@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\LeasingCompanies\Schemas;
 
 use App\Models\LeasingCompany;
+use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -38,6 +39,9 @@ class LeasingCompanyInfolist
 
                 Section::make('Notizen')
                     ->schema([
+                        IconEntry::make('active')
+                            ->label('Aktiv')
+                            ->boolean(),
                         TextEntry::make('notes')
                             ->label('Notizen')
                             ->placeholder('—')
