@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Vehicles;
 
+use App\Enums\VehicleStatus;
 use App\Filament\Resources\Vehicles\Pages\CreateVehicle;
 use App\Filament\Resources\Vehicles\Pages\EditVehicle;
 use App\Filament\Resources\Vehicles\Pages\ListVehicles;
@@ -18,6 +19,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use UnitEnum;
 
@@ -125,5 +127,15 @@ class VehicleResource extends Resource
             'view' => ViewVehicle::route('/{record}'),
             'edit' => EditVehicle::route('/{record}/edit'),
         ];
+    }
+
+    /**
+     * Ausgemusterte Fahrzeuge tauchen im Alltag nicht mehr auf - auch nicht
+     * in der globalen Suche, die sonst der einzige Weg waere, ein
+     * ausgemustertes Fahrzeug versehentlich wieder heranzuziehen.
+     */
+    public static function getGlobalSearchEloquentQuery(): Builder
+    {
+        return parent::getGlobalSearchEloquentQuery()->where('status', VehicleStatus::Active);
     }
 }

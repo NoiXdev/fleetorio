@@ -16,6 +16,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use UnitEnum;
 
@@ -86,5 +87,15 @@ class EmployeeResource extends Resource
             'view' => ViewEmployee::route('/{record}'),
             'edit' => EditEmployee::route('/{record}/edit'),
         ];
+    }
+
+    /**
+     * Inaktive Stammdaten sollen im Alltag nicht auftauchen - auch nicht ueber
+     * die globale Suche, die sonst der einzige Weg waere, sie unbeabsichtigt
+     * wieder in Umlauf zu bringen.
+     */
+    public static function getGlobalSearchEloquentQuery(): Builder
+    {
+        return parent::getGlobalSearchEloquentQuery()->where('active', true);
     }
 }
