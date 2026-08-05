@@ -51,7 +51,16 @@ class VehiclesTable
                     ->searchable(),
                 TextColumn::make('employee.last_name')
                     ->label('Fahrer')
-                    ->formatStateUsing(fn ($state, Vehicle $record): string => $record->employee?->full_name ?? '—')
+                    // Ein Fahrzeug, dessen Fahrer inzwischen inaktiv ist,
+                    // behaelt seine Zuordnung (siehe DeactivateAction). Der
+                    // Hinweis "(inaktiv)" verhindert, dass die Anzeige das
+                    // verschweigt und der Datensatz wirkt, als sei niemand
+                    // eingetragen.
+                    ->formatStateUsing(fn ($state, Vehicle $record): string => match (true) {
+                        $record->employee === null => '—',
+                        ! $record->employee->active => "{$record->employee->full_name} (inaktiv)",
+                        default => $record->employee->full_name,
+                    })
                     ->searchable(['first_name', 'last_name']),
                 TextColumn::make('fuel_type')
                     ->label('Antriebsart')

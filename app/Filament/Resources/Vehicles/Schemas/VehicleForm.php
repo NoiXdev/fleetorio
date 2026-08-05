@@ -83,8 +83,21 @@ class VehicleForm
                 ->schema([
                     Select::make('employee_id')
                         ->label('Mitarbeiter')
-                        ->relationship('employee', 'last_name')
-                        ->getOptionLabelFromRecordUsing(fn ($record): string => $record->full_name)
+                        // Inaktive gehoeren nicht in eine Neuzuordnung, der
+                        // bereits gesetzte Wert MUSS aber in der Liste bleiben:
+                        // sonst faende das Formular den gespeicherten Wert
+                        // nicht wieder und wuerde die Zuordnung beim naechsten
+                        // Speichern still leeren. Dasselbe Muster in allen vier
+                        // Selects dieser Section und der Vertrag-Section.
+                        ->relationship(
+                            name: 'employee',
+                            titleAttribute: 'last_name',
+                            modifyQueryUsing: fn ($query, ?Vehicle $record) => $query
+                                ->where(fn ($q) => $q->where('active', true)
+                                    ->orWhere('id', $record?->employee_id)),
+                        )
+                        ->getOptionLabelFromRecordUsing(fn ($record): string => $record->full_name
+                            .($record->active ? '' : ' (inaktiv)'))
                         ->searchable(['first_name', 'last_name'])
                         ->placeholder('Auswählen')
                         ->preload(),
@@ -93,9 +106,17 @@ class VehicleForm
                         // Anbieter + volle Nummer (Auftraggeber-Entscheidung),
                         // damit man bei mehreren Anbietern nicht raten muss.
                         // Der encrypted-Cast schuetzt weiterhin die Datenbank.
-                        ->relationship('fuelCard', 'card_number', fn ($query) => $query->with('fuelCardProvider'))
+                        ->relationship(
+                            name: 'fuelCard',
+                            titleAttribute: 'card_number',
+                            modifyQueryUsing: fn ($query, ?Vehicle $record) => $query
+                                ->with('fuelCardProvider')
+                                ->where(fn ($q) => $q->where('active', true)
+                                    ->orWhere('id', $record?->fuel_card_id)),
+                        )
                         ->getOptionLabelFromRecordUsing(
                             fn ($record): string => "{$record->fuelCardProvider->name} {$record->card_number}"
+                                .($record->active ? '' : ' (inaktiv)')
                         )
                         ->placeholder('Auswählen')
                         ->preload(),
@@ -106,13 +127,29 @@ class VehicleForm
                 ->schema([
                     Select::make('leasing_company_id')
                         ->label('Leasinggeber')
-                        ->relationship('leasingCompany', 'name')
+                        ->relationship(
+                            name: 'leasingCompany',
+                            titleAttribute: 'name',
+                            modifyQueryUsing: fn ($query, ?Vehicle $record) => $query
+                                ->where(fn ($q) => $q->where('active', true)
+                                    ->orWhere('id', $record?->leasing_company_id)),
+                        )
+                        ->getOptionLabelFromRecordUsing(fn ($record): string => $record->name
+                            .($record->active ? '' : ' (inaktiv)'))
                         ->searchable()
                         ->placeholder('Auswählen')
                         ->preload(),
                     Select::make('dealership_id')
                         ->label('Autohaus')
-                        ->relationship('dealership', 'name')
+                        ->relationship(
+                            name: 'dealership',
+                            titleAttribute: 'name',
+                            modifyQueryUsing: fn ($query, ?Vehicle $record) => $query
+                                ->where(fn ($q) => $q->where('active', true)
+                                    ->orWhere('id', $record?->dealership_id)),
+                        )
+                        ->getOptionLabelFromRecordUsing(fn ($record): string => $record->name
+                            .($record->active ? '' : ' (inaktiv)'))
                         ->searchable()
                         ->placeholder('Auswählen')
                         ->preload(),

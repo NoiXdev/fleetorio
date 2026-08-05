@@ -15,6 +15,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use UnitEnum;
 
 class DealershipResource extends Resource
@@ -61,5 +62,15 @@ class DealershipResource extends Resource
             'view' => ViewDealership::route('/{record}'),
             'edit' => EditDealership::route('/{record}/edit'),
         ];
+    }
+
+    /**
+     * Inaktive Stammdaten sollen im Alltag nicht auftauchen - auch nicht ueber
+     * die globale Suche, die sonst der einzige Weg waere, sie unbeabsichtigt
+     * wieder in Umlauf zu bringen.
+     */
+    public static function getGlobalSearchEloquentQuery(): Builder
+    {
+        return parent::getGlobalSearchEloquentQuery()->where('active', true);
     }
 }

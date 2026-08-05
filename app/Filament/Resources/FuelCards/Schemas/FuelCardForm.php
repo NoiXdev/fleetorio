@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\FuelCards\Schemas;
 
+use App\Models\FuelCard;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -17,7 +18,17 @@ class FuelCardForm
             ->components([
                 Select::make('fuel_card_provider_id')
                     ->label('Anbieter')
-                    ->relationship('fuelCardProvider', 'name')
+                    // Wie im Fahrzeugformular: inaktive Anbieter aus der Liste,
+                    // der bereits gesetzte bleibt drin.
+                    ->relationship(
+                        name: 'fuelCardProvider',
+                        titleAttribute: 'name',
+                        modifyQueryUsing: fn ($query, ?FuelCard $record) => $query
+                            ->where(fn ($q) => $q->where('active', true)
+                                ->orWhere('id', $record?->fuel_card_provider_id)),
+                    )
+                    ->getOptionLabelFromRecordUsing(fn ($record): string => $record->name
+                        .($record->active ? '' : ' (inaktiv)'))
                     ->native(false)
                     ->searchable()
                     ->preload()
