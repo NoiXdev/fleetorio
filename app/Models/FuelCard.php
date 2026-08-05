@@ -16,6 +16,16 @@ class FuelCard extends Model
         'card_number',
         'valid_until',
         'notes',
+        'active',
+    ];
+
+    /**
+     * Spiegelt den Migrations-Standard, damit ein frisch erzeugtes Modell
+     * denselben Zustand hat wie eine frisch geschriebene Zeile - auch ohne
+     * erneutes Laden aus der Datenbank. Gleiches Muster wie in User.
+     */
+    protected $attributes = [
+        'active' => true,
     ];
 
     protected $hidden = [
@@ -27,6 +37,7 @@ class FuelCard extends Model
         return [
             'card_number' => 'encrypted',
             'valid_until' => 'date',
+            'active' => 'boolean',
         ];
     }
 
