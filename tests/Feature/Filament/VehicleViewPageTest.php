@@ -257,7 +257,7 @@ describe('documents and appointments stacked instead of tabbed', function () {
         $html = livewire(ViewVehicle::class, ['record' => $vehicle->id])->html();
 
         expect($html)->toContain('Dokumente')
-            ->toContain('Termine')
+            ->toContain('Historie')
             ->toContain('Fahrzeugschein Original');
     });
 });
@@ -276,7 +276,7 @@ it('places notes after documents and appointments on the view page', function ()
     $html = livewire(ViewVehicle::class, ['record' => $vehicle->id])->html();
 
     $documentsPosition = strpos($html, 'Dokumente');
-    $appointmentsPosition = strpos($html, 'Termine');
+    $appointmentsPosition = strpos($html, 'Historie');
     $notesPosition = strpos($html, 'Notizen');
 
     expect($documentsPosition)->not->toBeFalse()

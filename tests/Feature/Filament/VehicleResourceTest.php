@@ -748,7 +748,7 @@ it('places notes after documents and appointments on the edit page', function ()
     $html = livewire(EditVehicle::class, ['record' => $vehicle->id])->html();
 
     $documentsPosition = strpos($html, 'Dokumente');
-    $appointmentsPosition = strpos($html, 'Termine');
+    $appointmentsPosition = strpos($html, 'Historie');
     $notesPosition = strpos($html, 'Notizen');
 
     expect($documentsPosition)->not->toBeFalse()

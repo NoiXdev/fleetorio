@@ -35,15 +35,18 @@ it('provides labels for user roles', function () {
 it('provides German labels for appointment types', function () {
     expect(AppointmentType::Service->getLabel())->toBe('Service')
         ->and(AppointmentType::Workshop->getLabel())->toBe('Werkstatt')
-        ->and(AppointmentType::Inspection->getLabel())->toBe('Hauptuntersuchung');
+        ->and(AppointmentType::Inspection->getLabel())->toBe('Hauptuntersuchung')
+        ->and(AppointmentType::Accident->getLabel())->toBe('Unfall')
+        ->and(AppointmentType::Damage->getLabel())->toBe('Schaden');
 });
 
-it('gives appointment types colors distinct from danger and primary', function () {
-    // 'danger' ist in diesem Panel auf Rose verschoben, 'primary' ist das
-    // Markenrot (siehe AdminPanelProvider) - beide sind reserviert und
-    // duerfen fuer Termin-Badges nicht wiederverwendet werden.
+// 'primary' ist das Markenrot (siehe AdminPanelProvider) und bleibt fuer
+// Historien-Badges reserviert. 'danger' war ursprunglich ebenfalls tabu -
+// mit Aufnahme des Unfalls hat es genau dort seinen Platz gefunden, weil
+// ein Unfall hervorstechen soll (siehe AppointmentType::getColor()).
+it('gives every appointment type a distinct colour that is not primary', function () {
     $colors = array_map(fn (AppointmentType $type): string => $type->getColor(), AppointmentType::cases());
 
-    expect(array_intersect($colors, ['danger', 'primary']))->toBeEmpty()
-        ->and(array_unique($colors))->toHaveCount(3);
+    expect(array_intersect($colors, ['primary']))->toBeEmpty()
+        ->and($colors)->toHaveCount(count(array_unique($colors)));
 });
