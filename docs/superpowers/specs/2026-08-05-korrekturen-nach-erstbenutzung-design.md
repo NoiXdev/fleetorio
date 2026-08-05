@@ -11,137 +11,123 @@ stammen; umgesetzt werden sie auf zwei Branches (siehe „Aufteilung" am Ende).
 
 ---
 
-## 1. Archivieren statt Löschen
+## 1. Deaktivieren statt Löschen
 
 **Warum:** Stammdaten verschwinden heute endgültig. Ein Mitarbeiter, der die Firma verlässt,
 lässt sich entweder gar nicht löschen (solange ein Fahrzeug an ihm hängt) oder ist danach weg —
 mitsamt der Information, wer das Fahrzeug gefahren hat. Gewünscht ist ein Mittelweg: Löschen
-archiviert, und nur ein bereits archivierter Datensatz lässt sich endgültig entfernen.
+deaktiviert, und nur ein bereits deaktivierter Datensatz lässt sich endgültig entfernen.
+
+### Der Zustand ist teilweise schon vorhanden
+
+Beim Planen hat sich gezeigt, dass die Anwendung das Konzept bereits kennt:
+
+- **Fahrzeuge** haben `status` mit `Aktiv` und `Ausgemustert` (`App\Enums\VehicleStatus`). Die
+  Fahrzeugliste filtert schon heute standardmäßig auf `Aktiv`, ausgemusterte sind zuschaltbar
+  (`VehiclesTable`, `SelectFilter::make('status')->default(...)`). Dashboard-Kacheln sowie
+  Leasing- und HU-Warnungen zählen ausgemusterte über `Vehicle::scopeActive()` nicht mit.
+- **Mitarbeiter** haben ein Feld `active`, sichtbar in Formular, Liste und Detailseite. Es filtert
+  aber nirgends etwas — es ist heute reine Dekoration.
+
+Deshalb **kein** SoftDeletes. Ein zusätzliches `deleted_at` ergäbe beim Fahrzeug drei Zustände
+(aktiv, ausgemustert, archiviert) und beim Mitarbeiter zwei gleich klingende nebeneinander. Statt
+dessen bekommt der vorhandene Zustand endlich eine Wirkung, und die übrigen Stammdaten bekommen
+dasselbe Feld.
+
+Nebeneffekt, der Arbeit spart: Ohne Soft Delete feuert `Vehicle::deleting` weiterhin nur beim
+echten Löschen. Der dort hinterlegte Code, der Bild und Dokumente von der Platte räumt, bleibt
+unverändert richtig.
+
+### Die Regel
+
+> Löschen ist nur möglich, wenn der Datensatz inaktiv ist (beim Fahrzeug: ausgemustert).
+> Solange er aktiv ist, bietet die Zeile kein Löschen an, sondern Deaktivieren.
+
+Deaktivieren ist dagegen **immer** erlaubt, auch bei einem Mitarbeiter, dem noch ein Fahrzeug
+zugeordnet ist. Die Zuordnung bleibt bestehen — jemand verlässt die Firma, das Auto bleibt ihm
+zugeordnet, bis ein Nachfolger da ist.
+
+Die Fremdschlüssel bleiben unangetastet: Ein inaktiver Mitarbeiter mit Fahrzeug lässt sich
+weiterhin nicht löschen, weil `restrictOnDelete` greift. `App\Filament\Actions\GuardedDeleteAction`
+fängt das wie bisher vorher ab und nennt das Fahrzeug, das im Weg steht.
 
 ### Umfang
 
-SoftDeletes (`deleted_at`) auf: `employees`, `dealerships`, `leasing_companies`, `fuel_cards`,
-`fuel_card_providers`, `vehicles`.
+Neues Feld `active` (boolean, Standard `true`) auf: `dealerships`, `leasing_companies`,
+`fuel_cards`, `fuel_card_providers`.
+
+Mitarbeiter (`employees.active`) und Fahrzeug (`vehicles.status`) haben ihren Zustand bereits.
 
 Benutzerkonten (`users`) bleiben ausgenommen. Sie sind keine Stammdaten des Fuhrparks, und an
-ihnen hängen Import- und Exportzeilen mit `cascadeOnDelete` — das ist ein eigener Fall, der hier
-nicht mitentschieden wird.
-
-### Warum SoftDeletes die gewünschte Regel ohne neue Prüfung liefert
-
-Ein Soft Delete ist ein `UPDATE`. Die Fremdschlüssel der Stammdaten stehen auf
-`restrictOnDelete` (siehe `create_vehicles_table`), und ein `UPDATE` löst sie nicht aus. Ein
-`forceDelete` ist dagegen ein echtes `DELETE` und läuft in genau diese Sperre.
-
-Daraus folgt ohne eine einzige zusätzliche Bedingung im Code:
-
-| Vorgang | Mitarbeiter ohne Fahrzeug | Mitarbeiter mit Fahrzeug |
-|---|---|---|
-| Archivieren | geht | geht |
-| Endgültig löschen | geht (nur wenn archiviert) | Datenbank verweigert |
-
-Das ist die gewünschte Semantik: archivieren immer, endgültig löschen nur, wenn der Datensatz
-archiviert ist **und** niemand mehr auf ihn zeigt.
+ihnen hängen Import- und Exportzeilen mit `cascadeOnDelete` — ein eigener Fall, der hier nicht
+mitentschieden wird.
 
 ### Oberfläche
 
-- Die Aktion „Löschen" heißt in allen Stammdatenlisten und beim Fahrzeug „Archivieren".
-- Bei einem archivierten Datensatz erscheinen „Wiederherstellen" und „Endgültig löschen".
-- Ein Filter „Archivierte anzeigen", standardmäßig aus.
-- Archivierte Zeilen tragen ein Badge „Archiviert".
-- `App\Filament\Actions\GuardedDeleteAction` bewacht künftig das **endgültige** Löschen statt des
-  Archivierens. Der Text bleibt inhaltlich gleich („ist noch dem Fahrzeug X zugeordnet"), nur der
-  Titel wird zu „Endgültig löschen nicht möglich". Ohne diese Vorabprüfung liefe der Benutzer in
-  eine SQL-Fehlermeldung des Fremdschlüssels.
+Je Zeile in den Stammdatenlisten und beim Fahrzeug:
 
-### Zwei Fallstricke, die abgesichert werden müssen
+| Aktion | sichtbar wenn | Wirkung |
+|---|---|---|
+| Deaktivieren (Fahrzeug: Ausmustern) | Datensatz ist aktiv | setzt `active = false` bzw. `status = retired`, mit Rückfrage |
+| Aktivieren | Datensatz ist inaktiv | setzt den Zustand zurück |
+| Löschen | Datensatz ist inaktiv | wie heute über `GuardedDeleteAction` |
 
-**1. `Vehicle::booted()` löscht beim Archivieren die Dateien.**
+Zusätzlich:
 
-`app/Models/Vehicle.php` registriert heute:
-
-```php
-static::deleting(function (Vehicle $vehicle): void {
-    $vehicle->documents->each->delete();
-
-    if (filled($vehicle->image_path)) {
-        Storage::disk('local')->delete($vehicle->image_path);
-    }
-});
-```
-
-Das `deleting`-Event feuert bei einem Soft Delete genauso wie bei einem harten. Ohne Änderung
-würde „Archivieren" das Fahrzeugbild und alle Dokumente von der Platte löschen, während der
-Datensatz erhalten bleibt — ein Datenverlust unter einer Beschriftung, die das Gegenteil
-verspricht.
-
-Der Rumpf muss deshalb auf `$vehicle->isForceDeleting()` eingegrenzt werden. Das ist die
-riskanteste Einzelstelle dieser Änderung und braucht einen eigenen Test, der nach dem
-Archivieren prüft, dass Datei und Dokumentzeilen noch da sind.
-
-**2. Eine `belongsTo`-Beziehung auf einen archivierten Datensatz liefert `null`.**
-
-Der globale Scope von SoftDeletes wirkt auch auf Beziehungen. Ein Fahrzeug, dessen Fahrer
-archiviert wurde, hätte also plötzlich gar keinen Fahrer mehr — nicht „einen ehemaligen", sondern
-optisch nie einen gehabt. Dasselbe gilt für Autohaus, Leasinggeber und Tankkarte.
-
-Deshalb:
-
-- Die `belongsTo`-Beziehungen am Fahrzeug bekommen `withTrashed()`, damit der Wert überhaupt
-  auflösbar bleibt.
-- In der Anzeige (Liste, Detailseite) wird ein archivierter Bezug als solcher gekennzeichnet,
-  z. B. „Max Mustermann (archiviert)".
-- Das **Auswahlfeld** im Fahrzeugformular zeigt nur nicht-archivierte Einträge **plus den aktuell
-  gesetzten Wert**. Ohne diese Ausnahme fände das Formular den gespeicherten Wert nicht in der
-  Optionsliste und würde die Zuordnung beim nächsten Speichern stillschweigend leeren.
+- Jede Stammdatenliste bekommt einen Filter „Status" mit Standard „Aktiv" — dasselbe Muster wie in
+  der Fahrzeugliste. Inaktive sind zuschaltbar, aber nicht im Weg.
+- Inaktive Zeilen tragen ein Badge „Inaktiv".
+- **Auswahlfelder** (Fahrer, Autohaus, Leasinggeber, Tankkarte am Fahrzeug; Anbieter an der
+  Tankkarte) zeigen nur aktive Einträge **plus den aktuell gesetzten Wert**. Ohne diese Ausnahme
+  fände das Formular den gespeicherten Wert nicht in der Optionsliste und würde die Zuordnung beim
+  nächsten Speichern stillschweigend leeren.
+- Wird ein inaktiver Bezug angezeigt (etwa der Fahrer eines Fahrzeugs), steht dahinter „(inaktiv)".
+- Die globale Suche liefert keine inaktiven Datensätze.
 
 ### Unique-Indizes
 
-`vehicles.license_plate` und `fuel_card_providers.name` sind `unique`. Ein archivierter Datensatz
-belegt den Wert weiterhin — ein archiviertes Kennzeichen lässt sich also nicht erneut anlegen.
+`vehicles.license_plate` und `fuel_card_providers.name` sind `unique`. Ein inaktiver Datensatz
+belegt den Wert weiterhin — ein Kennzeichen eines ausgemusterten Fahrzeugs lässt sich also nicht
+erneut vergeben.
 
-Das bleibt so. Die Alternative (Unique zusammen mit `deleted_at`) erlaubt dasselbe Kennzeichen
-mehrfach in der Tabelle und macht jede spätere Auswertung mehrdeutig. Stattdessen weist die
-Fehlermeldung darauf hin, dass der Wert möglicherweise von einem archivierten Eintrag belegt ist.
-
-### Auswertungen
-
-Dashboard-Kacheln, Leasing- und HU-Warnungen, Kostenübersicht und globale Suche dürfen
-archivierte Datensätze nicht mitzählen. Der globale Scope erledigt das für alles, was über das
-Modell läuft. Zu prüfen ist `Vehicle::sumAnnualCost()`, weil dort mit einem SQL-Aggregat
-gearbeitet wird.
+Das bleibt so; alles andere erlaubt dasselbe Kennzeichen mehrfach in der Tabelle und macht jede
+spätere Auswertung mehrdeutig. Die Fehlermeldung weist darauf hin, dass der Wert möglicherweise
+von einem inaktiven Eintrag belegt ist.
 
 ---
 
 ## 2. 2FA in der Benutzerverwaltung
 
-**Warum:** 2FA lässt sich heute nur im eigenen Profil einschalten. Ein Admin sieht nicht, wer es
-aktiv hat, kann es bei einem verlorenen Telefon nicht zurücksetzen und kann es nicht anordnen.
+**Warum:** 2FA lässt sich heute nur im eigenen Profil einschalten. Ein Admin kann es bei einem
+verlorenen Telefon nicht zurücksetzen und kann es nicht anordnen.
+
+**Was bereits existiert:** Die Spalte „2FA aktiv" in der Benutzerliste (`UsersTable`, `IconColumn`
+auf `app_authentication_secret`). Der Status ist also schon sichtbar.
 
 **Was ein Admin ausdrücklich nicht kann:** fremdes 2FA einrichten. Das Geheimnis darf nur in der
 Authenticator-App des Benutzers landen; wüsste es ein Zweiter, wäre der zweite Faktor keiner mehr.
 
 ### Umfang
 
-- **Statusspalte** in der Benutzerliste: 2FA aktiv oder nicht.
 - **Aktion „2FA zurücksetzen"** mit Rückfrage. Leert `app_authentication_secret` und
-  `app_authentication_recovery_codes`. Nur für Admins (`UserPolicy`).
+  `app_authentication_recovery_codes`. Nur für Admins (`UserPolicy`). Nur sichtbar, wenn der
+  Benutzer überhaupt 2FA eingerichtet hat.
 - **Neue Spalte `users.requires_two_factor`** (boolean, Standard `false`), im Benutzerformular als
-  Schalter.
+  Schalter, in der Liste als Symbol.
 
 ### Warum die Pflicht eigene Middleware braucht
 
 Filaments `multiFactorAuthentication(..., isRequired:)` akzeptiert zwar einen Closure, wird aber
-beim Registrieren der Routen ausgewertet — `Filament\Pages\Concerns\HasRoutes::getRouteMiddleware()`
-entscheidet dort, ob die Middleware überhaupt an die Route gehängt wird. Zu diesem Zeitpunkt gibt
-es keinen angemeldeten Benutzer, eine benutzerabhängige Entscheidung ist dort also nicht möglich.
+beim Registrieren der Routen ausgewertet — `Filament\Pages\Concerns\HasRoutes` entscheidet dort,
+ob die Middleware überhaupt an die Route gehängt wird. Zu diesem Zeitpunkt gibt es keinen
+angemeldeten Benutzer, eine benutzerabhängige Entscheidung ist dort also nicht möglich.
 
-Stattdessen eine eigene Middleware in der `authMiddleware` des Panels: Wer
-`requires_two_factor` gesetzt hat und noch kein `app_authentication_secret` besitzt, wird auf die
-Einrichtungsseite umgeleitet.
+Stattdessen eine eigene Middleware in der `authMiddleware` des Panels: Wer `requires_two_factor`
+gesetzt hat und noch kein `app_authentication_secret` besitzt, wird auf die Profilseite
+umgeleitet, auf der 2FA eingerichtet wird.
 
-**Fallstrick:** Die Middleware muss die Einrichtungsseite selbst, deren Formular-Requests und den
-Logout durchlassen. Sonst leitet sie den Benutzer auf eine Seite um, die sie erneut umleitet — eine
+**Fallstrick:** Die Middleware muss die Zielseite selbst, deren Livewire-Requests und den Logout
+durchlassen. Sonst leitet sie den Benutzer auf eine Seite um, die sie erneut umleitet — eine
 Schleife, aus der er sich nicht einmal abmelden kann.
 
 ---
@@ -177,7 +163,7 @@ Zwei neue Werte in `AppointmentType`:
 | Wert | Beschriftung | Farbe |
 |---|---|---|
 | `accident` | Unfall | `danger` (das Rose des Panels) |
-| `damage` | Schaden | Orange, in `AdminPanelProvider::panel()` unter `->colors()` neu registriert |
+| `damage` | Schaden | `orange`, in `AdminPanelProvider::panel()` unter `->colors()` neu registriert |
 
 `danger` war bisher bewusst gemieden, damit Badges nicht mit dem Löschen verwechselt werden. Für
 einen Unfall ist das Hervorstechen aber genau richtig. Orange muss neu registriert werden, weil
@@ -220,26 +206,27 @@ festem Rahmen.
 
 Zu Punkt 1:
 
-- Archivieren eines Fahrzeugs lässt Bild und Dokumente auf der Platte und in der Datenbank
-  bestehen (der Fallstrick oben).
-- Endgültiges Löschen eines Fahrzeugs entfernt Bild und Dokumente weiterhin.
-- Ein Mitarbeiter mit zugeordnetem Fahrzeug lässt sich archivieren; die Zuordnung bleibt.
-- Endgültiges Löschen eines zugeordneten Mitarbeiters wird verweigert — gegen MariaDB, damit der
-  echte Fremdschlüssel geprüft wird und nicht eine Nachbildung.
-- Ein Fahrzeug mit archiviertem Fahrer zeigt ihn weiterhin an und verliert die Zuordnung beim
+- Ein aktiver Datensatz lässt sich nicht löschen — die Aktion ist nicht vorhanden, und der direkte
+  Aufruf greift ebenfalls nicht.
+- Deaktivieren funktioniert auch bei einem Mitarbeiter mit zugeordnetem Fahrzeug; die Zuordnung
+  bleibt.
+- Löschen eines inaktiven, aber noch zugeordneten Mitarbeiters wird verweigert — gegen MariaDB,
+  damit der echte Fremdschlüssel geprüft wird und nicht eine Nachbildung.
+- Löschen eines inaktiven, nicht mehr zugeordneten Mitarbeiters funktioniert.
+- Ein Fahrzeug mit inaktivem Fahrer zeigt ihn weiterhin an und verliert die Zuordnung beim
   Speichern nicht.
-- Archivierte erscheinen nicht in Auswahlfeldern, Listen, globaler Suche, Dashboard-Kacheln und
-  Kostensumme; mit gesetztem Filter erscheinen sie.
-- Wiederherstellen macht den Datensatz wieder sichtbar.
+- Inaktive erscheinen nicht in Auswahlfeldern, nicht in der Standardansicht der Listen und nicht
+  in der globalen Suche; mit gesetztem Filter erscheinen sie in der Liste.
+- Aktivieren macht den Datensatz wieder normal nutzbar.
 
 Zu Punkt 2:
 
-- Die Statusspalte zeigt aktiv/inaktiv korrekt.
 - Zurücksetzen leert Geheimnis und Recovery-Codes; ein Nicht-Admin kann die Aktion weder sehen
   noch direkt aufrufen.
-- Ein Benutzer mit `requires_two_factor` und ohne Geheimnis wird umgeleitet; die
-  Einrichtungsseite selbst und der Logout bleiben erreichbar.
+- Ein Benutzer mit `requires_two_factor` und ohne Geheimnis wird umgeleitet; die Zielseite selbst
+  und der Logout bleiben erreichbar.
 - Ein Benutzer ohne die Pflicht wird nicht umgeleitet.
+- Ein Benutzer mit der Pflicht und eingerichtetem 2FA wird nicht umgeleitet.
 
 Zu Punkt 3:
 
