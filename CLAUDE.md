@@ -28,6 +28,13 @@ Sie arbeitet auf der eigenen Datenbank `test` und baut sie selbst auf:
 PHP und Composer sind auf dem Host nicht installiert. Also `ddev artisan …`, `ddev composer …`,
 `ddev exec vendor/bin/pest`. Meldet `ddev` „unknown command", ist das Arbeitsverzeichnis falsch.
 
+**`ddev exec` schickt den Befehl ein zweites Mal durch bash.** Anführungszeichen sind vorher schon
+weg, und `$…` wird expandiert, bevor der Befehl im Container ankommt. `ddev exec php -r 'echo
+$argv[1];' wert` läuft deshalb nicht wie gedacht — im Container kommt `php -r echo ; wert` an.
+Alles, was Anführungszeichen, `$`, `(` oder `;` enthält, gehört in eine Datei, die dann mit
+`ddev exec php datei.php` läuft. Werte über vorangestellte Zuweisungen übergeben
+(`ddev exec MEINE_VAR=wert php datei.php`), nicht über Argumente.
+
 ## Sprache
 
 Code, Klassennamen, Spaltennamen und Commit-Messages englisch. Oberflächentexte deutsch —
