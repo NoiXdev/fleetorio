@@ -36,4 +36,14 @@ class UserPolicy
     {
         return $user->isAdmin();
     }
+
+    /**
+     * Ein Admin kann fremdes 2FA zuruecksetzen, nie neu einrichten - das
+     * Geheimnis darf ausschliesslich in der Authenticator-App des Benutzers
+     * entstehen, sonst waere der zweite Faktor keiner mehr.
+     */
+    public function resetTwoFactor(User $user, User $model): bool
+    {
+        return $user->isAdmin();
+    }
 }

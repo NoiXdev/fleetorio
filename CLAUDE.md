@@ -74,6 +74,22 @@ Feldnamen ab.
   (`storage/app/private`) und dürfen ausschließlich über den autorisierten
   `VehicleDocumentDownloadController` ausgeliefert werden — kein `Storage::url()`, kein
   `public/storage`-Symlink, keine signierte URL.
+- **Löschen ist an den Zustand gebunden.** Ein aktiver Datensatz bietet die Löschaktion gar nicht
+  erst an; sichtbar wird sie erst bei einem inaktiven (bzw. beim Fahrzeug: ausgemusterten). Die
+  Regel steckt in `GuardedDeleteAction::visible()` und beim Fahrzeug zusätzlich in
+  `EditVehicle::deleteAction()`. Wer eine neue Löschaktion einbaut, muss die Bedingung mitnehmen —
+  sonst ist die Regel an dieser Stelle aufgehoben.
+- **Auswahlfelder auf Stammdaten filtern auf `active`**, ergänzt um den bereits gesetzten Wert
+  (`->orWhere('id', $record?->…)`). Ohne diese Ausnahme leert das nächste Speichern still eine
+  Zuordnung, wenn der Bezug inzwischen inaktiv geworden ist. Vorbilder: die vier `Select`s in
+  `VehicleForm` und der Anbieter-Select in `FuelCardForm`.
+- **Der Bruttolistenpreis gehört wie die übrigen Kostenfelder in die Section „Kosten"** —
+  außerhalb wäre er ungeschützt (siehe erster Punkt in dieser Liste).
+- **2FA-Pflicht liegt in eigener Middleware.** Filaments `multiFactorAuthentication(...,
+  isRequired:)` wertet den Wert beim Registrieren der Routen aus, wo noch kein Benutzer bekannt
+  ist. `EnsureTwoFactorWhenRequired` in der `authMiddleware` des Panels leitet auf die
+  Profilseite; die muss samt Livewire-Requests und Logout durchgelassen werden, sonst leitet die
+  Middleware auf eine Seite um, die sie erneut umleitet — eine Schleife.
 
 ## Dokumentation
 
