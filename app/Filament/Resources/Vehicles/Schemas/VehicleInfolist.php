@@ -114,6 +114,10 @@ class VehicleInfolist
                         ->label('Versicherung (jährlich)')
                         ->money('EUR')
                         ->placeholder('—'),
+                    TextEntry::make('gross_list_price')
+                        ->label('Bruttolistenpreis')
+                        ->money('EUR')
+                        ->placeholder('—'),
                     // Abgeleiteter Wert (siehe Vehicle::annualTotalCost()) -
                     // die Spezifikation verlangt ausgewiesene Jahreskosten
                     // direkt am Fahrzeug, nicht nur auf der Kostenseite.

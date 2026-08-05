@@ -207,6 +207,13 @@ class VehicleForm
                         ->minValue(0)
                         ->prefix('€')
                         ->dehydrated(fn (): bool => auth()->user()?->canViewCosts() ?? false),
+                    TextInput::make('gross_list_price')
+                        ->label('Bruttolistenpreis')
+                        ->numeric()
+                        ->minValue(0)
+                        ->prefix('€')
+                        ->helperText('Listenpreis bei Erstzulassung. Fließt nicht in die Jahreskosten ein.')
+                        ->dehydrated(fn (): bool => auth()->user()?->canViewCosts() ?? false),
                 ]),
         ];
     }
