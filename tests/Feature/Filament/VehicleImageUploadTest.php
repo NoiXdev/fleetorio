@@ -52,6 +52,24 @@ it('still rejects an image above the ten megabyte limit', function () {
         ->assertHasFormErrors(['image_path']);
 });
 
+// Die zweite Haelfte des Fehlers - das Hochrechnen kleiner Bilder auf 2000
+// Pixel - passiert im Browser, in FilePondPluginImageResize. Ein Test im
+// PHP-Prozess durchlaeuft diesen Schritt nie und kann das Ergebnis deshalb
+// nicht pruefen. Was er pruefen kann: dass die Anweisung, es zu unterlassen,
+// ueberhaupt bis zur Komponente gelangt und nicht bei einer spaeteren
+// Aenderung still verlorengeht.
+it('tells the browser not to upscale and not to crop', function () {
+    $vehicle = Vehicle::factory()->create();
+
+    $upload = livewire(EditVehicle::class, ['record' => $vehicle->getRouteKey()])
+        ->instance()
+        ->getSchemaComponent('form.image_path');
+
+    expect($upload->shouldAutomaticallyUpscaleImagesWhenResizing())->toBeFalse()
+        ->and($upload->getAutomaticallyResizeImagesMode())->toBe('contain')
+        ->and($upload->getAutomaticallyResizeImagesWidth())->toBe('2000');
+});
+
 it('still rejects a file type that is not an image', function () {
     $vehicle = Vehicle::factory()->create(['image_path' => null]);
 
