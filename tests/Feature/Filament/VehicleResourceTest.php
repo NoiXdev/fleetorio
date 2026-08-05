@@ -396,14 +396,12 @@ describe('the image field', function () {
     });
 
     it('still stores an uploaded image on the private disk, not the public one', function () {
-        // Belegt, dass ein Upload trotz imageEditor()/imageAspectRatio()/
+        // Belegt, dass ein Upload trotz imageEditor() und
         // automaticallyResizeImagesToWidth() weiterhin funktioniert. Die
         // Verkleinerung auf 2000 Pixel selbst laeuft ausschliesslich im
-        // Browser (FilePondPluginImageResize, siehe Bericht) - ein
-        // fillForm()-Test im PHP-Prozess durchlaeuft diesen JS-Schritt nicht
-        // und kann seine Wirkung deshalb hier nicht belegen. 800x600 (4:3)
-        // besteht aber die serverseitige Rule::dimensions()->ratio()-Pruefung
-        // aus imageAspectRatio('4:3'), die unabhaengig vom Editor greift.
+        // Browser (FilePondPluginImageResize) - ein fillForm()-Test im
+        // PHP-Prozess durchlaeuft diesen JS-Schritt nicht und kann seine
+        // Wirkung deshalb hier nicht belegen.
         Storage::fake('local');
         Storage::fake('public');
 
@@ -428,34 +426,31 @@ describe('the image field', function () {
         Storage::disk('public')->assertMissing($vehicle->image_path);
     });
 
-    it('rejects an image that is not cropped to 4:3, even bypassing the browser editor', function () {
-        // Serverseitige Zweitpruefung fuer den Fall, dass ein Bild ohne
-        // Browser-JS eingereicht wird (siehe Kommentar in VehicleForm):
-        // imageAspectRatio('4:3') erzeugt Rule::dimensions()->ratio(4/3),
-        // unabhaengig vom clientseitigen Bildeditor.
+    // Dieser Test hat frueher das Gegenteil geprueft: imageAspectRatio('4:3')
+    // erzeugte Rule::dimensions()->ratio(4/3) und wies jedes andere Format ab.
+    // Das war der gemeldete Fehler - die Bildgroesse soll ausdruecklich egal
+    // sein, es gilt nur noch maxSize(). Die Grenzfaelle stehen in
+    // VehicleImageUploadTest; hier bleibt der Fall stehen, der beim Anlegen
+    // ueber CreateVehicle laeuft.
+    it('accepts a square image on creation, since no aspect ratio is enforced', function () {
         Storage::fake('local');
 
         actingAs(User::factory()->admin()->withTwoFactor()->create());
 
-        $file = UploadedFile::fake()->image('quadratisch.jpg', 800, 800);
-
-        $component = livewire(CreateVehicle::class)
+        livewire(CreateVehicle::class)
             ->fillForm([
                 'brand' => 'VW',
                 'model' => 'Passat',
                 'license_plate' => 'M-IMG 0002',
                 'fuel_type' => FuelType::Diesel->value,
-                'image_path' => $file,
+                'image_path' => UploadedFile::fake()->image('quadratisch.jpg', 800, 800),
             ])
             ->call('create')
-            ->assertHasFormErrors(['image_path']);
+            ->assertHasNoFormErrors();
 
-        // Rule::dimensions() liefert die generische Laravel-Meldung
-        // "invalid image dimensions" statt eines einfachen "dimensions"-
-        // Regelnamens (siehe BaseFileUpload::getRules()) - assertHasFormErrors()
-        // oben belegt nur, dass ueberhaupt ein Fehler an diesem Feld haengt.
-        expect($component->instance()->getErrorBag()->first('data.image_path'))
-            ->toContain('invalid image dimensions');
+        $vehicle = Vehicle::where('license_plate', 'M-IMG 0002')->firstOrFail();
+
+        Storage::disk('local')->assertExists($vehicle->image_path);
     });
 });
 

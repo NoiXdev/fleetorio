@@ -252,42 +252,44 @@ class VehicleForm
                         ->directory('vehicle-images')
                         ->acceptedFileTypes(self::ACCEPTED_IMAGE_MIME_TYPES)
                         ->maxSize(self::MAX_IMAGE_SIZE_KB)
-                        // Zuschnitt fest auf 4:3 (Auftraggeber-Wunsch). Der
-                        // eingebaute Bildeditor (Cropper.js, Teil von Filaments
-                        // eigenem JS-Bundle, kein CDN) oeffnet sich automatisch,
-                        // sobald ein hochgeladenes Bild nicht bereits 4:3 ist -
-                        // siehe automaticallyOpenImageEditorForAspectRatio() in
-                        // vendor/filament/forms/docs/09-file-upload.md,
-                        // Abschnitt "Enforcing a specific aspect ratio". Da hier
-                        // nur ein einziges Seitenverhaeltnis uebergeben wird
-                        // (kein imageEditorAspectRatioOptions() mit Alternativen),
-                        // ist 4:3 die einzig waehlbare Option - der Cropper
-                        // erzwingt sie ueber cropperOptions.aspectRatio (siehe
-                        // file-upload.js, initEditor()).
+                        // Der Zuschneide-Editor (Cropper.js, Teil von Filaments
+                        // eigenem JS-Bundle, kein CDN) bleibt verfuegbar, aber
+                        // freiwillig: kein festes Seitenverhaeltnis mehr.
                         //
-                        // imageAspectRatio() ist zugleich eine echte
-                        // serverseitige Pruefung (Rule::dimensions()->ratio(),
-                        // siehe BaseFileUpload::getRules()) - falls ein
-                        // Bild ohne Browser-JS eingereicht wuerde, weist der
-                        // Server es dennoch zurueck. getimagesize() dahinter
-                        // ist eine PHP-Kernfunktion, keine GD/Imagick-Pflicht.
+                        // Frueher stand hier imageAspectRatio('4:3') zusammen mit
+                        // automaticallyOpenImageEditorForAspectRatio(). Das war
+                        // nicht nur eine Vorgabe fuer den Editor, sondern
+                        // erzeugte serverseitig Rule::dimensions()->ratio()
+                        // (siehe BaseFileUpload::getRules()). Jedes Bild in einem
+                        // anderen Verhaeltnis wurde damit abgewiesen - laut
+                        // Anforderung soll die Bildgroesse aber egal sein, es
+                        // gilt nur noch maxSize() weiter unten.
                         ->imageEditor()
-                        ->imageAspectRatio('4:3')
-                        ->automaticallyOpenImageEditorForAspectRatio()
                         // Verkleinerung auf 2000 Pixel Breite: das laeuft
                         // vollstaendig im Browser (FilePondPluginImageResize,
                         // Canvas-basiert), BEVOR die Datei ueberhaupt hochgeladen
                         // wird - der Server bekommt bereits die verkleinerte
                         // Datei und veraendert sie nicht weiter. Das erfordert
-                        // keine PHP-Bildbibliothek (weder GD noch Imagick); siehe
-                        // Bericht fuer die vollstaendige Herleitung. Ein Client
-                        // ohne JavaScript (oder ein direkter API-Aufruf ohne
-                        // Browser) haelt sich nicht an diese Grenze - anders als
-                        // beim Seitenverhaeltnis oben gibt es dafuer keine
-                        // serverseitige Zweitpruefung, da Filament dafuer keine
-                        // eingebaute Validierungsregel mitbringt.
-                        ->automaticallyResizeImagesMode('cover')
+                        // keine PHP-Bildbibliothek (weder GD noch Imagick). Ein
+                        // Client ohne JavaScript (oder ein direkter API-Aufruf
+                        // ohne Browser) haelt sich nicht an diese Grenze; eine
+                        // serverseitige Zweitpruefung dafuer bringt Filament
+                        // nicht mit. Die Grenze spart Speicher, sie schuetzt
+                        // nichts - das tut maxSize().
+                        //
+                        // 'contain' statt 'cover': ohne festes Seitenverhaeltnis
+                        // und ohne gesetzte Zielhoehe wuerde 'cover' ein Panorama
+                        // auf ein Quadrat beschneiden. 'contain' skaliert nur
+                        // herunter und schneidet nie.
+                        //
+                        // upscale(false) ist der zweite Teil des behobenen
+                        // Fehlers: Filaments Standard ist true, wodurch ein Bild
+                        // mit 800 Pixel Breite auf 2000 hochgerechnet wurde -
+                        // sichtbar unscharf und um ein Vielfaches groesser als
+                        // das Original.
+                        ->automaticallyResizeImagesMode('contain')
                         ->automaticallyResizeImagesToWidth('2000')
+                        ->automaticallyUpscaleImagesWhenResizing(false)
                         // Deutsche Fehlermeldungen: Laravels eigene
                         // validation.php liegt in diesem Projekt nur auf
                         // Englisch vor (kein lang/de, kein laravel-lang-Paket),
@@ -299,7 +301,6 @@ class VehicleForm
                             // Zahl aus der Konstante, siehe Kommentar im
                             // VehicleDocumentsRelationManager.
                             'max' => 'Das Bild darf höchstens '.(self::MAX_IMAGE_SIZE_KB / 1024).' MB groß sein.',
-                            'dimensions' => 'Das Bild muss im Seitenverhältnis 4:3 zugeschnitten sein.',
                         ])
                         ->imagePreviewHeight('160')
                         // Ohne diese Ueberschreibung wuerde die Vorschau eines
