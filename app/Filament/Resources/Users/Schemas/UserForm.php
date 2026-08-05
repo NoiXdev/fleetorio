@@ -45,6 +45,10 @@ class UserForm
                 Toggle::make('can_view_costs')
                     ->label('Darf Kosten sehen')
                     ->helperText('Unabhängig von der Rolle. Ohne dieses Recht bleiben alle Beträge verborgen.'),
+                Toggle::make('requires_two_factor')
+                    ->label('2FA verpflichtend')
+                    ->helperText('Der Benutzer wird beim nächsten Aufruf des Panels auf die Profilseite geleitet und '
+                        .'kann die Anwendung erst nach Einrichtung von 2FA benutzen.'),
             ]);
     }
 }

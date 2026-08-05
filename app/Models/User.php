@@ -26,6 +26,7 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
         'password',
         'role',
         'can_view_costs',
+        'requires_two_factor',
     ];
 
     protected $hidden = [
@@ -41,6 +42,7 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
     protected $attributes = [
         'role' => 'viewer',
         'can_view_costs' => false,
+        'requires_two_factor' => false,
     ];
 
     /**
@@ -53,6 +55,7 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
             'password' => 'hashed',
             'role' => UserRole::class,
             'can_view_costs' => 'boolean',
+            'requires_two_factor' => 'boolean',
         ];
     }
 
