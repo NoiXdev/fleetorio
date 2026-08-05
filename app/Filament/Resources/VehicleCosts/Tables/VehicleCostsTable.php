@@ -41,6 +41,14 @@ class VehicleCostsTable
                     ->money('EUR')
                     ->sortable()
                     ->summarize(Sum::make('insurance_sum')->label('Summe')->money('EUR')),
+                // Bewusst OHNE Summarizer und OHNE Anteil an annual_total_cost:
+                // Ein Listenpreis ist keine laufende Position, die man ueber
+                // einen Fuhrpark aufsummiert oder in Jahreskosten einrechnet.
+                TextColumn::make('gross_list_price')
+                    ->label('Bruttolistenpreis')
+                    ->money('EUR')
+                    ->sortable()
+                    ->placeholder('—'),
                 // Abgeleiteter Wert: nicht sortierbar, da keine Datenbankspalte.
                 TextColumn::make('annual_total_cost')
                     ->label('Jahreskosten')

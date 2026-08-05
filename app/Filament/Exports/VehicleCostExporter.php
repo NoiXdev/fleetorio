@@ -20,6 +20,9 @@ class VehicleCostExporter extends Exporter
             ExportColumn::make('monthly_lease_rate')->label('Leasingrate monatlich'),
             ExportColumn::make('annual_vehicle_tax')->label('Kfz-Steuer jaehrlich'),
             ExportColumn::make('annual_insurance')->label('Versicherung jaehrlich'),
+            // Bewusst nach den laufenden Kosten und vor den Jahreskosten - er
+            // fliesst nicht ein, aber gehoert zur Kostenuebersicht.
+            ExportColumn::make('gross_list_price')->label('Bruttolistenpreis'),
             ExportColumn::make('annual_total_cost')
                 ->label('Jahreskosten')
                 // annual_total_cost ist ein reiner float-Accessor (siehe

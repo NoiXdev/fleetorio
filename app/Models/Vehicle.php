@@ -63,6 +63,7 @@ class Vehicle extends Model
         'monthly_lease_rate',
         'annual_vehicle_tax',
         'annual_insurance',
+        'gross_list_price',
         'status',
         'notes',
     ];
@@ -78,6 +79,7 @@ class Vehicle extends Model
             'monthly_lease_rate' => 'decimal:2',
             'annual_vehicle_tax' => 'decimal:2',
             'annual_insurance' => 'decimal:2',
+            'gross_list_price' => 'decimal:2',
         ];
     }
 

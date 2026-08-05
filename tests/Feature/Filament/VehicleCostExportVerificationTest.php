@@ -63,6 +63,7 @@ it('actually runs the cost export under the sync queue and writes a file with co
         'Leasingrate monatlich',
         'Kfz-Steuer jaehrlich',
         'Versicherung jaehrlich',
+        'Bruttolistenpreis',
         'Jahreskosten',
     ]);
 
@@ -85,10 +86,12 @@ it('actually runs the cost export under the sync queue and writes a file with co
         // Nachkommastellen formatiert (siehe VehicleCostExporter), genau wie
         // die drei decimal:2-Spalten davor - kein Formatunterschied mehr in
         // derselben Zeile.
+        // Index 7 statt 6 fuer die Jahreskosten, weil zwischen Versicherung
+        // und Jahreskosten der Bruttolistenpreis eingezogen ist.
         expect($columns[3])->toBe('100.00')
             ->and($columns[4])->toBe('50.00')
             ->and($columns[5])->toBe('25.00')
-            ->and($columns[6])->toBe('1275.00');
+            ->and($columns[7])->toBe('1275.00');
     }
 });
 
@@ -131,8 +134,10 @@ it('keeps two decimal places for annual_total_cost even for uneven amounts', fun
 
     // 123.45 * 12 = 1481.40 - eine Zahl, die als float ("1481.4") ihre
     // trailing zero verlieren wuerde, waere die Formatierung nicht explizit.
+    // Index 7 statt 6, weil zwischen Versicherung und Jahreskosten der
+    // Bruttolistenpreis eingezogen ist (siehe Header oben).
     expect($columns[3])->toBe('123.45')
-        ->and($columns[6])->toBe('1481.40');
+        ->and($columns[7])->toBe('1481.40');
 });
 
 /**
