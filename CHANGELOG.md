@@ -1,4 +1,11 @@
-## [1.0.3](https://github.com/NoiXdev/fleetorio/compare/v1.0.2...v) (2026-08-05)
+## [1.0.4](https://github.com/NoiXdev/fleetorio/compare/v1.0.3...v) (2026-10-21)
+
+
+### Bug Fixes
+
+* **docker:** refuse to build an image with PHP below 8.4.27 ([03975c7](https://github.com/NoiXdev/fleetorio/commit/03975c7812b1311e8492293d8553913a92fd1f00))
+
+## [1.0.3](https://github.com/NoiXdev/fleetorio/compare/v1.0.2...v1.0.3) (2026-08-05)
 
 
 ### Features
