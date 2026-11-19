@@ -1,4 +1,6 @@
-## [1.0.4](https://github.com/NoiXdev/fleetorio/compare/v1.0.3...v) (2026-10-21)
+## [1.0.5](https://github.com/NoiXdev/fleetorio/compare/v1.0.4...v) (2026-11-19)
+
+## [1.0.4](https://github.com/NoiXdev/fleetorio/compare/v1.0.3...v1.0.4) (2026-10-21)
 
 
 ### Bug Fixes
